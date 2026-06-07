@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-07T07:48:52.772498+00:00",
+  "generated_at": "2026-06-07T07:53:41.229330+00:00",
   "username": "haitai",
   "total_forks": 44,
   "status_counts": {
@@ -23,9 +23,9 @@
       "parent_url": "https://github.com/doocs/md",
       "parent_description": "✍ WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、自定义主题样式、内容管理、多图床、AI 助手等特性",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-06-07T06:57:17Z",
+      "parent_updated_at": "2026-06-07T07:50:14Z",
       "parent_pushed_at": "2026-06-06T09:38:29Z",
-      "parent_stars": 12739,
+      "parent_stars": 12740,
       "parent_forks": 2158,
       "behind_by": 0,
       "ahead_by": 0,
