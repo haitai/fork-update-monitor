@@ -160,10 +160,13 @@ def compare_fork_with_parent(repo):
     comparison = api_request(compare_url_a)
 
     if comparison and isinstance(comparison, dict) and "behind_by" in comparison:
-        behind_by = comparison.get("behind_by", 0)
-        ahead_by = comparison.get("ahead_by", 0)
+        # 方向: base=fork, head=parent
+        # ahead_by = parent 比 fork 多的 commit = fork 落后的数量
+        # behind_by = parent 比 fork 少的 commit = fork 领先的数量
+        behind_by = comparison.get("ahead_by", 0)
+        ahead_by = comparison.get("behind_by", 0)
         compare_ok = True
-        print(f"    Compare (fork→parent): ahead={ahead_by}, behind={behind_by}")
+        print(f"    Compare (fork→parent): fork_behind={behind_by}, fork_ahead={ahead_by}")
     else:
         # 方法1b: 反过来，在 parent 仓库上调用
         compare_url_b = (
