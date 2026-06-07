@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-06-07T08:55:53.680727+00:00",
+  "generated_at": "2026-06-07T09:01:54.203515+00:00",
   "username": "haitai",
   "total_forks": 44,
   "status_counts": {
     "up_to_date": 22,
-    "behind": 11,
-    "ahead": 9,
+    "behind": 10,
+    "ahead": 10,
     "diverged": 2,
     "unknown": 0
   },
@@ -69,8 +69,8 @@
       "parent_pushed_at": "2026-06-01T04:45:07Z",
       "parent_stars": 2,
       "parent_forks": 1,
-      "behind_by": 60,
-      "ahead_by": 11,
+      "behind_by": 11,
+      "ahead_by": 60,
       "status": "diverged"
     },
     {
@@ -132,9 +132,9 @@
       "parent_pushed_at": "2026-06-04T18:25:36Z",
       "parent_stars": 13607,
       "parent_forks": 1110,
-      "behind_by": 15,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 15,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/CloudFlare-ImgBed",
@@ -174,9 +174,9 @@
       "parent_pushed_at": "2026-03-21T17:29:14Z",
       "parent_stars": 96,
       "parent_forks": 57,
-      "behind_by": 10,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 10,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/emdash-templates",
@@ -195,9 +195,9 @@
       "parent_pushed_at": "2026-06-05T11:17:55Z",
       "parent_stars": 28,
       "parent_forks": 13,
-      "behind_by": 5,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 5,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/NextChat",
@@ -258,9 +258,9 @@
       "parent_pushed_at": "2026-06-03T08:23:45Z",
       "parent_stars": 32,
       "parent_forks": 19,
-      "behind_by": 0,
-      "ahead_by": 6,
-      "status": "ahead"
+      "behind_by": 6,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/mhys",
@@ -321,9 +321,9 @@
       "parent_pushed_at": "2026-06-05T13:06:35Z",
       "parent_stars": 376,
       "parent_forks": 125,
-      "behind_by": 0,
-      "ahead_by": 14,
-      "status": "ahead"
+      "behind_by": 14,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/Sink",
@@ -342,9 +342,9 @@
       "parent_pushed_at": "2026-06-06T12:07:33Z",
       "parent_stars": 6766,
       "parent_forks": 4709,
-      "behind_by": 0,
-      "ahead_by": 8,
-      "status": "ahead"
+      "behind_by": 8,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/animal-island-ui",
@@ -363,9 +363,9 @@
       "parent_pushed_at": "2026-06-06T15:36:52Z",
       "parent_stars": 3119,
       "parent_forks": 263,
-      "behind_by": 0,
-      "ahead_by": 15,
-      "status": "ahead"
+      "behind_by": 15,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/excalidraw",
@@ -384,9 +384,9 @@
       "parent_pushed_at": "2026-06-06T16:18:08Z",
       "parent_stars": 124790,
       "parent_forks": 13939,
-      "behind_by": 0,
-      "ahead_by": 3,
-      "status": "ahead"
+      "behind_by": 3,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/magic-resume",
@@ -405,9 +405,9 @@
       "parent_pushed_at": "2026-06-01T05:19:08Z",
       "parent_stars": 8389,
       "parent_forks": 940,
-      "behind_by": 0,
-      "ahead_by": 2,
-      "status": "ahead"
+      "behind_by": 2,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/mingyu",
@@ -426,9 +426,9 @@
       "parent_pushed_at": "2026-06-03T09:22:30Z",
       "parent_stars": 113,
       "parent_forks": 36,
-      "behind_by": 0,
-      "ahead_by": 8,
-      "status": "ahead"
+      "behind_by": 8,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/moodist",
@@ -447,9 +447,9 @@
       "parent_pushed_at": "2026-05-13T09:31:36Z",
       "parent_stars": 3561,
       "parent_forks": 307,
-      "behind_by": 4,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 4,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/exif-photo-blog",
@@ -489,9 +489,9 @@
       "parent_pushed_at": "2026-06-04T09:31:15Z",
       "parent_stars": 2204,
       "parent_forks": 378,
-      "behind_by": 0,
-      "ahead_by": 4,
-      "status": "ahead"
+      "behind_by": 4,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/qiaomu-blog-opensource",
@@ -531,9 +531,9 @@
       "parent_pushed_at": "2026-03-02T06:41:56Z",
       "parent_stars": 300,
       "parent_forks": 128,
-      "behind_by": 1,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 1,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/cloudflare-ai-web",
@@ -552,9 +552,9 @@
       "parent_pushed_at": "2026-05-30T23:29:38Z",
       "parent_stars": 2157,
       "parent_forks": 582,
-      "behind_by": 0,
-      "ahead_by": 3,
-      "status": "ahead"
+      "behind_by": 3,
+      "ahead_by": 0,
+      "status": "behind"
     },
     {
       "fork_repo": "haitai/temp-mail",
@@ -573,8 +573,8 @@
       "parent_pushed_at": "2026-04-06T04:54:44Z",
       "parent_stars": 108,
       "parent_forks": 47,
-      "behind_by": 12,
-      "ahead_by": 8,
+      "behind_by": 8,
+      "ahead_by": 12,
       "status": "diverged"
     },
     {
@@ -615,9 +615,9 @@
       "parent_pushed_at": "2026-04-08T08:07:36Z",
       "parent_stars": 55,
       "parent_forks": 15,
-      "behind_by": 2,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 2,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/OSSshelf",
@@ -636,9 +636,9 @@
       "parent_pushed_at": "2026-03-17T09:21:53Z",
       "parent_stars": 1,
       "parent_forks": 15,
-      "behind_by": 152,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 152,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/web-realesrgan",
@@ -657,9 +657,9 @@
       "parent_pushed_at": "2025-12-12T08:46:11Z",
       "parent_stars": 421,
       "parent_forks": 59,
-      "behind_by": 5,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 5,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/MeowNocode",
@@ -678,9 +678,9 @@
       "parent_pushed_at": "2026-01-24T07:33:15Z",
       "parent_stars": 453,
       "parent_forks": 79,
-      "behind_by": 13,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 13,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/CloudPaste",
@@ -762,9 +762,9 @@
       "parent_pushed_at": "2025-12-25T02:21:20Z",
       "parent_stars": 228,
       "parent_forks": 47,
-      "behind_by": 6,
-      "ahead_by": 0,
-      "status": "behind"
+      "behind_by": 0,
+      "ahead_by": 6,
+      "status": "ahead"
     },
     {
       "fork_repo": "haitai/CFr2-webdav",
