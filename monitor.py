@@ -144,18 +144,41 @@ def compare_fork_with_parent(repo):
     behind_by = 0
     ahead_by = 0
     status = "unknown"
+    compare_ok = False
 
-    # 方法1: Compare API
-    compare_url = (
-        f"{GITHUB_API}/repos/{parent_full_name}/compare/"
-        f"{parent_default_branch}...{fork_full_name}:{fork_default_branch}"
+    # 方法1a: 在 fork 仓库上调用 Compare API
+    # 格式: repos/{fork}/compare/{base}...{owner}:{repo}:{branch}
+    # base = fork 的默认分支, head = parent 的默认分支
+    # 这样 ahead_by = fork 领先于 parent 的 commit 数
+    #      behind_by = fork 落后于 parent 的 commit 数
+    parent_owner = parent_full_name.split("/")[0]
+    compare_head = f"{parent_owner}:{parent_full_name.split("/")[1]}:{parent_default_branch}"
+    compare_url_a = (
+        f"{GITHUB_API}/repos/{fork_full_name}/compare/"
+        f"{fork_default_branch}...{compare_head}"
     )
-    comparison = api_request(compare_url)
+    comparison = api_request(compare_url_a)
 
     if comparison and isinstance(comparison, dict) and "behind_by" in comparison:
         behind_by = comparison.get("behind_by", 0)
         ahead_by = comparison.get("ahead_by", 0)
+        compare_ok = True
+        print(f"    Compare (fork→parent): ahead={ahead_by}, behind={behind_by}")
+    else:
+        # 方法1b: 反过来，在 parent 仓库上调用
+        compare_url_b = (
+            f"{GITHUB_API}/repos/{parent_full_name}/compare/"
+            f"{parent_default_branch}...{fork_full_name}:{fork_default_branch}"
+        )
+        comparison = api_request(compare_url_b)
+        if comparison and isinstance(comparison, dict) and "behind_by" in comparison:
+            # 这里 ahead_by = fork 独有, behind_by = parent 独有
+            ahead_by = comparison.get("ahead_by", 0)
+            behind_by = comparison.get("behind_by", 0)
+            compare_ok = True
+            print(f"    Compare (parent→fork): ahead={ahead_by}, behind={behind_by}")
 
+    if compare_ok:
         if behind_by == 0 and ahead_by == 0:
             status = "up_to_date"
         elif behind_by > 0 and ahead_by == 0:
@@ -165,33 +188,40 @@ def compare_fork_with_parent(repo):
         else:
             status = "diverged"
     else:
-        # 方法2: 比较最新 commit 时间
-        print(f"    Compare API failed for {fork_full_name}, using fallback", file=sys.stderr)
-        parent_commits = api_request(
-            f"{GITHUB_API}/repos/{parent_full_name}/commits?per_page=1&sha={parent_default_branch}"
+        # 方法2: 比较两个分支的 HEAD commit SHA
+        print(f"    Compare API failed for {fork_full_name}, using commit SHA fallback", file=sys.stderr)
+        
+        fork_branch = api_request(
+            f"{GITHUB_API}/repos/{fork_full_name}/branches/{fork_default_branch}"
         )
-        fork_commits = api_request(
-            f"{GITHUB_API}/repos/{fork_full_name}/commits?per_page=1&sha={fork_default_branch}"
+        parent_branch = api_request(
+            f"{GITHUB_API}/repos/{parent_full_name}/branches/{parent_default_branch}"
         )
         
-        if (parent_commits and isinstance(parent_commits, list) and len(parent_commits) > 0 and
-            fork_commits and isinstance(fork_commits, list) and len(fork_commits) > 0):
-            parent_date = parent_commits[0].get("commit", {}).get("committer", {}).get("date", "")
-            fork_date = fork_commits[0].get("commit", {}).get("committer", {}).get("date", "")
-            if parent_date and fork_date:
-                if parent_date > fork_date:
-                    status = "behind"
-                    behind_by = -1
-                else:
-                    status = "up_to_date"
+        fork_sha = fork_branch.get("commit", {}).get("sha", "") if fork_branch and isinstance(fork_branch, dict) else ""
+        parent_sha = parent_branch.get("commit", {}).get("sha", "") if parent_branch and isinstance(parent_branch, dict) else ""
+        
+        if fork_sha and parent_sha:
+            if fork_sha == parent_sha:
+                status = "up_to_date"
+                behind_by = 0
+                ahead_by = 0
+            else:
+                # SHA 不同，无法确定 ahead/behind 数量，标记为 behind
+                status = "behind"
+                behind_by = -1
+                ahead_by = -1
         else:
-            # 方法3: pushed_at
+            # 方法3: pushed_at 近似判断
             parent_pushed = parent.get("pushed_at", "")
             fork_pushed = repo.get("pushed_at", "")
             if parent_pushed and fork_pushed:
                 if parent_pushed > fork_pushed:
                     status = "behind"
                     behind_by = -1
+                elif fork_pushed > parent_pushed:
+                    status = "ahead"
+                    ahead_by = -1
                 else:
                     status = "up_to_date"
 
