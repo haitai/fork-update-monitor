@@ -2,9 +2,8 @@ name: Update Fork Monitor
 
 on:
   schedule:
-    # 每6小时运行一次 (UTC 0,6,12,18)
     - cron: "0 0,6,12,18 * * *"
-  workflow_dispatch: # 支持手动触发
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,18 +20,34 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Debug - Check token
+        run: |
+          echo "=== Token Debug ==="
+          echo "PERSONAL_ACCESS_TOKEN set: ${{ secrets.PERSONAL_ACCESS_TOKEN != '' }}"
+          echo "GITHUB_TOKEN set: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo "Env GITHUB_TOKEN length: ${#GITHUB_TOKEN}"
+          echo "Env GITHUB_TOKEN prefix: ${GITHUB_TOKEN:0:4}..."
+          echo "Env GITHUB_TOKEN suffix: ...${GITHUB_TOKEN: -4}"
+          # 测试 API
+          echo "=== Test /user/repos ==="
+          curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/user/repos?type=forks&per_page=3" | head -c 500
+          echo ""
+          echo "=== Test /users/haitai/repos ==="
+          curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/users/haitai/repos?type=forks&per_page=3" | head -c 500
+          echo ""
+          echo "=== Rate Limit ==="
+          curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/rate_limit" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Core: {d[\"resources\"][\"core\"][\"remaining\"]}/{d[\"resources\"][\"core\"][\"limit\"]}')"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
+
       - name: Run monitor
         env:
-          # 需要 Classic PAT (public_repo scope) 或 Fine-grained PAT (Account: Repositories Read + Repository: Contents Read)
-          # 如果没有设置 PERSONAL_ACCESS_TOKEN，会回退到 GITHUB_TOKEN（可能无法列出所有 fork）
           GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
-        run: |
-          echo "=== Environment ==="
-          echo "Username: $GITHUB_USERNAME"
-          echo "Token set: $([ -n \"$GITHUB_TOKEN\" ] && echo 'yes' || echo 'no')"
-          echo "Token prefix: ${GITHUB_TOKEN:0:8}..."
-          python monitor.py 2>&1
+        run: python monitor.py 2>&1
 
       - name: Commit and push if changed
         run: |
