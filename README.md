@@ -41,7 +41,7 @@ GitHub Actions (cron) → monitor.py → GitHub API → data.json + index.html �
 
 1. 进入仓库 Settings → Pages
 2. Source 选择 `gh-pages` 分支
-3. 访问 `https://<username>.github.io/github-repos-update-monitor/`
+3. 访问 `https://<username>.github.io/fork-update-monitor/`
 
 ### 环境变量
 
