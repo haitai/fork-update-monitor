@@ -17,10 +17,11 @@
 GitHub Actions (cron) → monitor.py → GitHub API → data.json + index.html → GitHub Pages
 ```
 
-1. `monitor.py` 通过 GitHub API 获取用户所有 fork 仓库
-2. 对比每个 fork 与上游仓库的 commit 差异
-3. 生成 `data.json` 数据文件和 `index.html` 页面
-4. GitHub Actions 自动 commit 并部署到 `gh-pages` 分支
+1. `monitor.py` 通过 GitHub API 获取用户所有仓库，过滤出 `fork=True` 的仓库
+2. 逐个请求 fork 仓库详情以获取 `parent`（上游）信息
+3. 使用 Compare API 对比每个 fork 与上游仓库的 commit 差异
+4. 生成 `data.json` 数据文件和 `index.html` 页面
+5. GitHub Actions 自动 commit 并部署到 `gh-pages` 分支
 
 ## 配置
 
@@ -46,16 +47,27 @@ GitHub Actions (cron) → monitor.py → GitHub API → data.json + index.html �
 
 | 变量 | 说明 | 来源 |
 |------|------|------|
-| `GITHUB_TOKEN` | API 访问令牌 | GitHub Actions 自动提供 |
+| `GITHUB_TOKEN` | API 访问令牌 | 优先使用 `PERSONAL_ACCESS_TOKEN`，否则用 Actions 默认 token |
 | `GITHUB_USERNAME` | GitHub 用户名 | 自动取仓库 owner |
 
-> 如果你的 fork 数量较多（>60），建议在仓库 Settings → Secrets 中添加 `GITHUB_TOKEN` 为 Personal Access Token 以提高 API 速率限制。
+### Personal Access Token（推荐）
+
+GitHub Actions 默认的 `GITHUB_TOKEN` 权限有限，**建议添加 Personal Access Token**：
+
+1. 进入 GitHub → Settings → Developer settings → **Personal access tokens** → Tokens (classic)
+2. Generate new token (classic)
+3. 勾选 `public_repo` scope（如需监控私有仓库则勾选 `repo`）
+4. 复制 token
+5. 进入本仓库 Settings → Secrets and variables → Actions → New repository secret
+6. Name 填 `PERSONAL_ACCESS_TOKEN`，Value 粘贴 token
+
+> ⚠️ Fine-grained token 需要在 **Account permissions** 中授权 **Repositories: Read-only**，否则无法调用 `/user/repos` API。推荐使用 Classic token（更简单）。
 
 ## 本地运行
 
 ```bash
 export GITHUB_USERNAME=your-username
-export GITHUB_TOKEN=your-token  # 可选，公开仓库不需要
+export GITHUB_TOKEN=your-token  # 推荐，否则容易触发 API rate limit
 python monitor.py
 # 打开 index.html 查看结果
 ```
@@ -64,8 +76,9 @@ python monitor.py
 
 ```
 ├── .github/workflows/update.yml  # GitHub Actions 工作流
-├── monitor.py                    # 主脚本：获取 fork 数据并生成页面
-├── template.html                 # HTML 模板
+├── .github/workflows/update.yml  # GitHub Actions 工作流
+├── monitor.py                    # 主脚本：获取 fork 数据并生成页面（使用 curl 调用 API）
+├── template.html                 # HTML 模板（深色主题）
 ├── config.json                   # 配置：过滤/排除仓库
 ├── data.json                     # 生成：仓库数据 (gitignore)
 ├── index.html                    # 生成：最终页面 (部署到 Pages)
