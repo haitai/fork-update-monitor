@@ -41,16 +41,14 @@ def api_request(url, params=None):
         if result.returncode != 0:
             print(f"    [ERROR] curl returned {result.returncode}: {result.stderr[:200]}", file=sys.stderr)
             return None
-        body = result.stdout
-        data = json.loads(body)
+        data = json.loads(result.stdout)
         
-        # 检查是否返回了错误消息
+        # 检查是否返回了 API 错误消息
         if isinstance(data, dict) and "message" in data and "id" not in data:
             msg = data.get("message", "")
             if "rate limit" in msg.lower() or "forbidden" in msg.lower():
                 print(f"    [WARN] API error: {msg}", file=sys.stderr)
                 return None
-            # 有些端点返回 message 但不是错误（如 compare 无差异）
         
         return data
     except subprocess.TimeoutExpired:
@@ -58,7 +56,6 @@ def api_request(url, params=None):
         return None
     except json.JSONDecodeError as e:
         print(f"    [ERROR] JSON decode error for {url}: {e}", file=sys.stderr)
-        print(f"    [ERROR] Response: {body[:200] if 'body' in dir() else 'N/A'}", file=sys.stderr)
         return None
     except Exception as e:
         print(f"    [ERROR] Request failed for {url}: {e}", file=sys.stderr)
@@ -74,54 +71,63 @@ def check_rate_limit():
 
 
 def get_fork_repos(username):
-    """获取用户所有 fork 的仓库列表。"""
-    repos = []
+    """获取用户所有 fork 的仓库列表（含 parent 信息）。
     
-    # 方法1: /user/repos（认证用户，含私有）
+    列表 API 不返回 parent 字段，需要逐个请求仓库详情。
+    策略：先获取所有仓库列表，过滤 fork=True，再逐个获取详情。
+    """
+    # 第一步：获取所有仓库（用 type=all 而不是 type=forks，因为后者不可靠）
+    all_repos = []
+    
     if GITHUB_TOKEN:
-        print(f"  Trying /user/repos API (authenticated)...")
+        print(f"  Using /user/repos API (authenticated)...")
         page = 1
         while True:
             data = api_request(
                 f"{GITHUB_API}/user/repos",
-                params={"type": "forks", "per_page": "100", "page": str(page), "sort": "updated"},
+                params={"type": "all", "per_page": "100", "page": str(page), "sort": "updated"},
             )
-            if data is None:
-                print(f"    /user/repos failed, falling back", file=sys.stderr)
+            if data is None or not isinstance(data, list):
                 break
-            if not isinstance(data, list):
-                print(f"    /user/repos unexpected type: {type(data)}, falling back", file=sys.stderr)
-                break
-            repos.extend(data)
-            print(f"    Page {page}: got {len(data)} repos")
+            all_repos.extend(data)
+            print(f"    Page {page}: got {len(data)} repos (total: {len(all_repos)})")
             if len(data) < 100:
                 break
             page += 1
-        if repos:
-            print(f"  Total from /user/repos: {len(repos)}")
-            return repos
+    else:
+        print(f"  Using /users/{username}/repos API (public)...")
+        page = 1
+        while True:
+            data = api_request(
+                f"{GITHUB_API}/users/{username}/repos",
+                params={"type": "all", "per_page": "100", "page": str(page), "sort": "updated"},
+            )
+            if data is None or not isinstance(data, list):
+                break
+            all_repos.extend(data)
+            print(f"    Page {page}: got {len(data)} repos (total: {len(all_repos)})")
+            if len(data) < 100:
+                break
+            page += 1
 
-    # 方法2: /users/{username}/repos（公开仓库）
-    repos = []
-    print(f"  Using /users/{username}/repos API (public)...")
-    page = 1
-    while True:
-        data = api_request(
-            f"{GITHUB_API}/users/{username}/repos",
-            params={"type": "forks", "per_page": "100", "page": str(page), "sort": "updated"},
-        )
-        if data is None:
-            break
-        if not isinstance(data, list):
-            break
-        repos.extend(data)
-        print(f"    Page {page}: got {len(data)} repos")
-        if len(data) < 100:
-            break
-        page += 1
+    # 第二步：过滤出 fork 仓库
+    fork_repos = [r for r in all_repos if r.get("fork") is True]
+    print(f"  Found {len(fork_repos)} fork repos out of {len(all_repos)} total")
+
+    # 第三步：逐个获取 fork 仓库详情（包含 parent 字段）
+    detailed_repos = []
+    for i, repo in enumerate(fork_repos, 1):
+        full_name = repo["full_name"]
+        print(f"    [{i}/{len(fork_repos)}] Fetching details for {full_name}...")
+        detail = api_request(f"{GITHUB_API}/repos/{full_name}")
+        if detail:
+            detailed_repos.append(detail)
+        else:
+            # fallback：用列表数据（没有 parent，但至少保留）
+            print(f"      Failed to get details, using list data (no parent)", file=sys.stderr)
+            detailed_repos.append(repo)
     
-    print(f"  Total from /users/{username}/repos: {len(repos)}")
-    return repos
+    return detailed_repos
 
 
 def compare_fork_with_parent(repo):
@@ -269,7 +275,7 @@ def main():
     check_rate_limit()
 
     repos = get_fork_repos(GITHUB_USERNAME)
-    print(f"\nFound {len(repos)} fork repos")
+    print(f"\nProcessing {len(repos)} fork repos with parent info...")
 
     if not repos:
         print("WARNING: No fork repos found!")
