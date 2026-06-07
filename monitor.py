@@ -2,13 +2,13 @@
 """
 GitHub Fork Repos Update Monitor
 检查 fork 的仓库是否有上游更新，生成 JSON 数据和 HTML 页面。
+使用 subprocess + curl 避免 urllib SSL 兼容性问题。
 """
 
 import json
 import os
+import subprocess
 import sys
-import urllib.request
-import urllib.error
 from datetime import datetime, timezone
 
 
@@ -18,37 +18,47 @@ GITHUB_USERNAME = os.environ.get("GITHUB_USERNAME", "")
 
 
 def api_request(url, params=None):
-    """发送 GitHub API 请求，返回 JSON 数据或 None。"""
+    """通过 curl 发送 GitHub API 请求，返回 JSON 数据或 None。"""
     if params is None:
         params = {}
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "fork-update-monitor",
-    }
+    headers = [
+        "-H", "Accept: application/vnd.github.v3+json",
+        "-H", "X-GitHub-Api-Version: 2022-11-28",
+        "-H", "User-Agent: fork-update-monitor",
+        "-s",
+    ]
     if GITHUB_TOKEN:
-        headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+        headers.extend(["-H", f"Authorization: Bearer {GITHUB_TOKEN}"])
 
     separator = "&" if "?" in url else "?"
     if params:
         query = "&".join(f"{k}={v}" for k, v in params.items())
         url = f"{url}{separator}{query}"
 
-    req = urllib.request.Request(url, headers=headers)
+    cmd = ["curl"] + headers + [url]
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            body = resp.read().decode("utf-8")
-            rate_remaining = resp.headers.get("X-RateLimit-Remaining", "?")
-            rate_limit = resp.headers.get("X-RateLimit-Limit", "?")
-            print(f"    [API] {url} → {rate_remaining}/{rate_limit} remaining", file=sys.stderr)
-            return json.loads(body)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")[:500]
-        if e.code == 403:
-            print(f"    [WARN] 403 Forbidden: {url}", file=sys.stderr)
-            print(f"    [WARN] Response: {body}", file=sys.stderr)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            print(f"    [ERROR] curl returned {result.returncode}: {result.stderr[:200]}", file=sys.stderr)
             return None
-        print(f"    [ERROR] HTTP {e.code} for {url}: {body}", file=sys.stderr)
+        body = result.stdout
+        data = json.loads(body)
+        
+        # 检查是否返回了错误消息
+        if isinstance(data, dict) and "message" in data and "id" not in data:
+            msg = data.get("message", "")
+            if "rate limit" in msg.lower() or "forbidden" in msg.lower():
+                print(f"    [WARN] API error: {msg}", file=sys.stderr)
+                return None
+            # 有些端点返回 message 但不是错误（如 compare 无差异）
+        
+        return data
+    except subprocess.TimeoutExpired:
+        print(f"    [ERROR] curl timeout for {url}", file=sys.stderr)
+        return None
+    except json.JSONDecodeError as e:
+        print(f"    [ERROR] JSON decode error for {url}: {e}", file=sys.stderr)
+        print(f"    [ERROR] Response: {body[:200] if 'body' in dir() else 'N/A'}", file=sys.stderr)
         return None
     except Exception as e:
         print(f"    [ERROR] Request failed for {url}: {e}", file=sys.stderr)
@@ -57,19 +67,17 @@ def api_request(url, params=None):
 
 def check_rate_limit():
     """检查当前 API rate limit 状态。"""
-    url = f"{GITHUB_API}/rate_limit"
-    data = api_request(url)
+    data = api_request(f"{GITHUB_API}/rate_limit")
     if data:
         core = data.get("resources", {}).get("core", {})
-        print(f"  Rate limit: {core.get('remaining', '?')}/{core.get('limit', '?')} remaining, "
-              f"resets at {core.get('reset', '?')}")
+        print(f"  Rate limit: {core.get('remaining', '?')}/{core.get('limit', '?')} remaining")
 
 
 def get_fork_repos(username):
     """获取用户所有 fork 的仓库列表。"""
     repos = []
     
-    # 方法1: /user/repos（认证用户，含私有，需要 token 有 repo 权限）
+    # 方法1: /user/repos（认证用户，含私有）
     if GITHUB_TOKEN:
         print(f"  Trying /user/repos API (authenticated)...")
         page = 1
@@ -79,10 +87,10 @@ def get_fork_repos(username):
                 params={"type": "forks", "per_page": "100", "page": str(page), "sort": "updated"},
             )
             if data is None:
-                print(f"    /user/repos failed (likely insufficient scope), falling back", file=sys.stderr)
+                print(f"    /user/repos failed, falling back", file=sys.stderr)
                 break
             if not isinstance(data, list):
-                print(f"    /user/repos returned unexpected type: {type(data)}, falling back", file=sys.stderr)
+                print(f"    /user/repos unexpected type: {type(data)}, falling back", file=sys.stderr)
                 break
             repos.extend(data)
             print(f"    Page {page}: got {len(data)} repos")
@@ -93,7 +101,7 @@ def get_fork_repos(username):
             print(f"  Total from /user/repos: {len(repos)}")
             return repos
 
-    # 方法2: /users/{username}/repos（公开仓库，无需特殊权限）
+    # 方法2: /users/{username}/repos（公开仓库）
     repos = []
     print(f"  Using /users/{username}/repos API (public)...")
     page = 1
@@ -103,10 +111,8 @@ def get_fork_repos(username):
             params={"type": "forks", "per_page": "100", "page": str(page), "sort": "updated"},
         )
         if data is None:
-            print(f"    API returned None, stopping pagination", file=sys.stderr)
             break
         if not isinstance(data, list):
-            print(f"    Unexpected response type: {type(data)}", file=sys.stderr)
             break
         repos.extend(data)
         print(f"    Page {page}: got {len(data)} repos")
@@ -133,14 +139,14 @@ def compare_fork_with_parent(repo):
     ahead_by = 0
     status = "unknown"
 
-    # 方法1: 使用 Compare API
+    # 方法1: Compare API
     compare_url = (
         f"{GITHUB_API}/repos/{parent_full_name}/compare/"
         f"{parent_default_branch}...{fork_full_name}:{fork_default_branch}"
     )
     comparison = api_request(compare_url)
 
-    if comparison and "behind_by" in comparison:
+    if comparison and isinstance(comparison, dict) and "behind_by" in comparison:
         behind_by = comparison.get("behind_by", 0)
         ahead_by = comparison.get("ahead_by", 0)
 
@@ -153,21 +159,19 @@ def compare_fork_with_parent(repo):
         else:
             status = "diverged"
     else:
-        # Compare API 失败，用 commit 时间做粗略判断
-        print(f"    Compare API failed for {fork_full_name}, using fallback", file=sys.stderr)
-        
         # 方法2: 比较最新 commit 时间
-        parent_commit = api_request(
+        print(f"    Compare API failed for {fork_full_name}, using fallback", file=sys.stderr)
+        parent_commits = api_request(
             f"{GITHUB_API}/repos/{parent_full_name}/commits?per_page=1&sha={parent_default_branch}"
         )
-        fork_commit = api_request(
+        fork_commits = api_request(
             f"{GITHUB_API}/repos/{fork_full_name}/commits?per_page=1&sha={fork_default_branch}"
         )
         
-        if (parent_commit and isinstance(parent_commit, list) and len(parent_commit) > 0 and
-            fork_commit and isinstance(fork_commit, list) and len(fork_commit) > 0):
-            parent_date = parent_commit[0].get("commit", {}).get("committer", {}).get("date", "")
-            fork_date = fork_commit[0].get("commit", {}).get("committer", {}).get("date", "")
+        if (parent_commits and isinstance(parent_commits, list) and len(parent_commits) > 0 and
+            fork_commits and isinstance(fork_commits, list) and len(fork_commits) > 0):
+            parent_date = parent_commits[0].get("commit", {}).get("committer", {}).get("date", "")
+            fork_date = fork_commits[0].get("commit", {}).get("committer", {}).get("date", "")
             if parent_date and fork_date:
                 if parent_date > fork_date:
                     status = "behind"
@@ -175,7 +179,7 @@ def compare_fork_with_parent(repo):
                 else:
                     status = "up_to_date"
         else:
-            # 方法3: 用 pushed_at 判断
+            # 方法3: pushed_at
             parent_pushed = parent.get("pushed_at", "")
             fork_pushed = repo.get("pushed_at", "")
             if parent_pushed and fork_pushed:
@@ -260,19 +264,15 @@ def main():
     print(f"Username: {GITHUB_USERNAME}")
     print(f"Token available: {'yes' if GITHUB_TOKEN else 'no'}")
     if GITHUB_TOKEN:
-        print(f"Token prefix: {GITHUB_TOKEN[:8]}...")
+        print(f"Token prefix: {GITHUB_TOKEN[:4]}...")
     
-    # 检查 rate limit
     check_rate_limit()
 
     repos = get_fork_repos(GITHUB_USERNAME)
     print(f"\nFound {len(repos)} fork repos")
 
     if not repos:
-        print("WARNING: No fork repos found! Possible causes:")
-        print("  - API rate limit exceeded (no token or token lacks scope)")
-        print("  - User has no public fork repos")
-        print("  - For private repos, PAT needs 'repo' scope (classic) or 'Repositories: Read' (fine-grained)")
+        print("WARNING: No fork repos found!")
         check_rate_limit()
 
     results = []
