@@ -292,7 +292,7 @@ function renderRepos() {
     const shortFork = r.fork_repo.split("/")[1];
     const shortParent = r.parent_repo.split("/")[1];
     const desc = r.fork_description || r.parent_description || "";
-    const syncUrl = `https://github.com/${r.fork_repo}/sync`;
+    const syncUrl = `https://github.com/${r.fork_repo}`;
     const forkUpdated = r.fork_pushed_at ? formatDate(r.fork_pushed_at) : "N/A";
     const parentUpdated = r.parent_pushed_at ? formatDate(r.parent_pushed_at) : "N/A";
 
