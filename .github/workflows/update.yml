@@ -23,7 +23,8 @@ jobs:
 
       - name: Run monitor
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 优先使用 PAT (PERSONAL_ACCESS_TOKEN secret)，回退到 GITHUB_TOKEN
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_USERNAME: ${{ github.repository_owner }}
         run: python monitor.py
 
