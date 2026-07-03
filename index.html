@@ -165,6 +165,35 @@
     text-align: center;
     font-size: 0.75rem;
     color: var(--text-secondary);
+    position: relative;
+  }
+  .back-to-top {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 1000;
+  }
+  .back-to-top.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .back-to-top:hover {
+    border-color: var(--accent);
+    color: var(--accent);
   }
   .empty-state {
     text-align: center;
@@ -193,6 +222,8 @@
 
 <div id="repos"></div>
 
+<button class="back-to-top" id="backToTop" title="回顶部" aria-label="回到顶部">↑</button>
+
 <footer>
   Powered by GitHub Actions &amp; Pages · 
   <span id="gen-time"></span>
@@ -200,17 +231,59 @@
 
 <script>
 const DATA = {
-  "generated_at": "2026-07-03T03:23:26.653358+00:00",
+  "generated_at": "2026-07-03T09:20:12.480162+00:00",
   "username": "haitai",
   "total_forks": 44,
   "status_counts": {
-    "up_to_date": 29,
-    "behind": 3,
+    "up_to_date": 31,
+    "behind": 1,
     "ahead": 10,
     "diverged": 2,
     "unknown": 0
   },
   "repos": [
+    {
+      "fork_repo": "haitai/mingyu",
+      "fork_url": "https://github.com/haitai/mingyu",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-03T05:14:25Z",
+      "fork_pushed_at": "2026-07-03T05:14:19Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "Brhiza/mingyu",
+      "parent_url": "https://github.com/Brhiza/mingyu",
+      "parent_description": "八字、紫微、星盘、六爻、梅花、奇门、大六壬、小六壬、塔罗、雷诺曼、灵签、择日一站式排盘，输出结构化提示词与数据。提供公开 API、MCP Server 与 skill。",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-07-02T18:39:32Z",
+      "parent_pushed_at": "2026-07-02T18:39:29Z",
+      "parent_stars": 176,
+      "parent_forks": 52,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/exif-photo-blog",
+      "fork_url": "https://github.com/haitai/exif-photo-blog",
+      "fork_description": "Photo blog, reporting 🤓 EXIF camera details (aperture, shutter speed, ISO) for each image.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-03T05:14:07Z",
+      "fork_pushed_at": "2026-07-03T05:14:02Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "sambecker/exif-photo-blog",
+      "parent_url": "https://github.com/sambecker/exif-photo-blog",
+      "parent_description": "Photo blog, reporting 🤓 EXIF camera details (aperture, shutter speed, ISO) for each image.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-07-02T22:11:32Z",
+      "parent_pushed_at": "2026-07-02T22:11:28Z",
+      "parent_stars": 1696,
+      "parent_forks": 387,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
     {
       "fork_repo": "haitai/animal-island-ui",
       "fork_url": "https://github.com/haitai/animal-island-ui",
@@ -224,10 +297,10 @@ const DATA = {
       "parent_url": "https://github.com/guokaigdg/animal-island-ui",
       "parent_description": "Animal 风格的 React 组件库 灵感来源于任天堂《集合啦！动物森友会》 Vue 版同步发布 Animal Crossing-style React UI component library, inspired by Nintendo's game visuals Vue version available. ",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T01:24:29Z",
+      "parent_updated_at": "2026-07-03T09:17:22Z",
       "parent_pushed_at": "2026-07-02T15:29:46Z",
-      "parent_stars": 3747,
-      "parent_forks": 314,
+      "parent_stars": 3753,
+      "parent_forks": 315,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -266,9 +339,9 @@ const DATA = {
       "parent_url": "https://github.com/realchendahuang/sub-store-cloudflare",
       "parent_description": "一个部署在 Cloudflare Workers 上的订阅聚合与规则配置工具。它把订阅源、节点处理、组合订阅和分流规则模板放在云端，客户端只需要订阅最终生成的链接。",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T00:48:15Z",
+      "parent_updated_at": "2026-07-03T07:21:53Z",
       "parent_pushed_at": "2026-06-28T17:11:40Z",
-      "parent_stars": 236,
+      "parent_stars": 240,
       "parent_forks": 39,
       "behind_by": 0,
       "ahead_by": 1,
@@ -329,34 +402,13 @@ const DATA = {
       "parent_url": "https://github.com/MarSeventh/CloudFlare-ImgBed",
       "parent_description": "🏖️ A serverless, open-source file hosting solution built on Cloudflare. Supports image hosting, secure file storage, and personal cloud drive capabilities.",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T02:46:31Z",
+      "parent_updated_at": "2026-07-03T08:59:17Z",
       "parent_pushed_at": "2026-07-02T04:21:05Z",
-      "parent_stars": 5471,
-      "parent_forks": 6966,
+      "parent_stars": 5470,
+      "parent_forks": 6969,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
-    },
-    {
-      "fork_repo": "haitai/mingyu",
-      "fork_url": "https://github.com/haitai/mingyu",
-      "fork_description": "",
-      "fork_default_branch": "main",
-      "fork_updated_at": "2026-07-02T05:10:56Z",
-      "fork_pushed_at": "2026-07-02T05:10:48Z",
-      "fork_stars": 0,
-      "fork_forks": 0,
-      "parent_repo": "Brhiza/mingyu",
-      "parent_url": "https://github.com/Brhiza/mingyu",
-      "parent_description": "八字、紫微、星盘、六爻、梅花、奇门、大六壬、小六壬、塔罗、雷诺曼、灵签、择日一站式排盘，输出结构化提示词与数据。提供公开 API、MCP Server 与 skill。",
-      "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-02T18:39:32Z",
-      "parent_pushed_at": "2026-07-02T18:39:29Z",
-      "parent_stars": 176,
-      "parent_forks": 52,
-      "behind_by": 23,
-      "ahead_by": 0,
-      "status": "behind"
     },
     {
       "fork_repo": "haitai/notion_bookmarks",
@@ -392,10 +444,10 @@ const DATA = {
       "parent_url": "https://github.com/excalidraw/excalidraw",
       "parent_description": "Virtual whiteboard for sketching hand-drawn like diagrams",
       "parent_default_branch": "master",
-      "parent_updated_at": "2026-07-03T02:59:45Z",
+      "parent_updated_at": "2026-07-03T09:11:04Z",
       "parent_pushed_at": "2026-07-02T22:54:59Z",
-      "parent_stars": 126658,
-      "parent_forks": 14244,
+      "parent_stars": 126686,
+      "parent_forks": 14249,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -413,10 +465,10 @@ const DATA = {
       "parent_url": "https://github.com/doocs/md",
       "parent_description": "✍ WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、自定义主题样式、内容管理、多图床、AI 助手等特性",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T03:06:27Z",
+      "parent_updated_at": "2026-07-03T08:48:19Z",
       "parent_pushed_at": "2026-06-30T06:32:03Z",
-      "parent_stars": 12946,
-      "parent_forks": 2179,
+      "parent_stars": 12948,
+      "parent_forks": 2180,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -434,9 +486,9 @@ const DATA = {
       "parent_url": "https://github.com/alam00000/bentopdf",
       "parent_description": "The Privacy First PDF Toolkit",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T03:10:40Z",
+      "parent_updated_at": "2026-07-03T06:48:15Z",
       "parent_pushed_at": "2026-07-02T21:48:37Z",
-      "parent_stars": 13927,
+      "parent_stars": 13929,
       "parent_forks": 1144,
       "behind_by": 2,
       "ahead_by": 21,
@@ -498,7 +550,7 @@ const DATA = {
       "parent_description": "瞬刻，更简洁、更现代化的内容发布平台",
       "parent_default_branch": "main",
       "parent_updated_at": "2026-06-25T03:23:31Z",
-      "parent_pushed_at": "2026-07-03T02:47:09Z",
+      "parent_pushed_at": "2026-07-03T06:25:12Z",
       "parent_stars": 138,
       "parent_forks": 17,
       "behind_by": 0,
@@ -521,7 +573,7 @@ const DATA = {
       "parent_updated_at": "2026-07-02T17:33:43Z",
       "parent_pushed_at": "2026-06-17T14:44:12Z",
       "parent_stars": 2167,
-      "parent_forks": 576,
+      "parent_forks": 577,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -539,10 +591,10 @@ const DATA = {
       "parent_url": "https://github.com/JOYCEQL/magic-resume",
       "parent_description": "free online AI resume editor，the only official website is  https://magicv.art",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T02:53:16Z",
+      "parent_updated_at": "2026-07-03T08:24:28Z",
       "parent_pushed_at": "2026-06-15T15:56:37Z",
-      "parent_stars": 8669,
-      "parent_forks": 968,
+      "parent_stars": 8671,
+      "parent_forks": 970,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -626,7 +678,7 @@ const DATA = {
       "parent_updated_at": "2026-07-03T01:50:17Z",
       "parent_pushed_at": "2026-06-06T12:07:33Z",
       "parent_stars": 6880,
-      "parent_forks": 4826,
+      "parent_forks": 4829,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -707,10 +759,10 @@ const DATA = {
       "parent_url": "https://github.com/ChatGPTNextWeb/NextChat",
       "parent_description": "✨ Light and Fast AI Assistant. Support: Web | iOS | MacOS | Android |  Linux | Windows",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-03T03:22:32Z",
+      "parent_updated_at": "2026-07-03T09:10:32Z",
       "parent_pushed_at": "2026-05-15T01:19:01Z",
-      "parent_stars": 88366,
-      "parent_forks": 59505,
+      "parent_stars": 88369,
+      "parent_forks": 59506,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -749,34 +801,13 @@ const DATA = {
       "parent_url": "https://github.com/remvze/moodist",
       "parent_description": "🌲 Ambient sounds for focus and calm.",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-02T23:06:01Z",
+      "parent_updated_at": "2026-07-03T08:58:02Z",
       "parent_pushed_at": "2026-05-13T09:31:36Z",
-      "parent_stars": 3604,
+      "parent_stars": 3606,
       "parent_forks": 311,
       "behind_by": 0,
       "ahead_by": 4,
       "status": "ahead"
-    },
-    {
-      "fork_repo": "haitai/exif-photo-blog",
-      "fork_url": "https://github.com/haitai/exif-photo-blog",
-      "fork_description": "Photo blog, reporting 🤓 EXIF camera details (aperture, shutter speed, ISO) for each image.",
-      "fork_default_branch": "main",
-      "fork_updated_at": "2026-05-13T10:50:38Z",
-      "fork_pushed_at": "2026-05-09T21:43:32Z",
-      "fork_stars": 0,
-      "fork_forks": 0,
-      "parent_repo": "sambecker/exif-photo-blog",
-      "parent_url": "https://github.com/sambecker/exif-photo-blog",
-      "parent_description": "Photo blog, reporting 🤓 EXIF camera details (aperture, shutter speed, ISO) for each image.",
-      "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-02T22:11:32Z",
-      "parent_pushed_at": "2026-07-02T22:11:28Z",
-      "parent_stars": 1696,
-      "parent_forks": 387,
-      "behind_by": 3,
-      "ahead_by": 0,
-      "status": "behind"
     },
     {
       "fork_repo": "haitai/qiaomu-blog-opensource",
@@ -791,9 +822,9 @@ const DATA = {
       "parent_url": "https://github.com/joeseesun/qiaomu-blog-opensource",
       "parent_description": "Open-source Cloudflare blog template based on OpenNext, Next.js 16, D1, and R2",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-02T13:52:47Z",
+      "parent_updated_at": "2026-07-03T06:43:13Z",
       "parent_pushed_at": "2026-04-28T04:47:39Z",
-      "parent_stars": 271,
+      "parent_stars": 274,
       "parent_forks": 112,
       "behind_by": 0,
       "ahead_by": 0,
@@ -1292,6 +1323,19 @@ function escHtml(s) {
   div.textContent = s;
   return div.innerHTML;
 }
+
+}
+
+// Back to top
+(function() {
+  const btn = document.getElementById("backToTop");
+  window.addEventListener("scroll", () => {
+    btn.classList.toggle("visible", window.scrollY > 400);
+  });
+  btn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+})();
 
 init();
 </script>
