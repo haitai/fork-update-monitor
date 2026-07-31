@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/favicon.png">
 <title>Fork Repos Update Monitor</title>
+<script src="https://unpkg.com/lucide@latest"></script>
 <style>
   :root {
     --bg: #0d1117;
@@ -17,6 +18,7 @@
     --yellow: #d29922;
     --red: #f85149;
     --purple: #bc8cff;
+    --icon-size: 16px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -28,7 +30,14 @@
     max-width: 960px;
     margin: 0 auto;
   }
-  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  h1 svg { width: 24px; height: 24px; }
   .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem; }
 
   /* Stats bar */
@@ -45,7 +54,12 @@
     text-align: center;
   }
   .stat-card .num { font-size: 1.75rem; font-weight: 700; }
-  .stat-card .label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .label {
+    font-size: 0.75rem; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  }
+  .stat-card .label svg { width: 13px; height: 13px; }
   .stat-card.up-to-date .num { color: var(--green); }
   .stat-card.behind .num { color: var(--yellow); }
   .stat-card.ahead .num { color: var(--accent); }
@@ -65,20 +79,54 @@
     cursor: pointer;
     font-size: 0.8rem;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
+  .filter-btn svg { width: 14px; height: 14px; }
   .filter-btn:hover { border-color: var(--accent); color: var(--text); }
   .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* Search */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .search-wrap .search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    display: flex;
+  }
+  .search-wrap .search-icon svg { width: 16px; height: 16px; }
+  .search-wrap .clear-btn {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    padding: 0.2rem;
+    border-radius: 4px;
+  }
+  .search-wrap .clear-btn svg { width: 16px; height: 16px; }
+  .search-wrap .clear-btn:hover { color: var(--text); background: var(--border); }
+  .search-wrap.has-text .clear-btn { display: flex; }
   .search-box {
     width: 100%;
-    padding: 0.6rem 1rem;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
     font-size: 0.9rem;
-    margin-bottom: 1.5rem;
     outline: none;
   }
   .search-box:focus { border-color: var(--accent); }
@@ -106,9 +154,15 @@
   }
   .repo-name {
     font-size: 1rem; font-weight: 600;
+    display: flex; align-items: center; gap: 0.4rem;
   }
   .repo-name a { color: var(--accent); text-decoration: none; }
   .repo-name a:hover { text-decoration: underline; }
+  .repo-name .arrow-icon {
+    color: var(--yellow);
+    display: inline-flex;
+  }
+  .repo-name .arrow-icon svg { width: 14px; height: 14px; }
 
   .status-badge {
     font-size: 0.7rem;
@@ -118,7 +172,11 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
   }
+  .status-badge svg { width: 12px; height: 12px; }
   .status-badge.up_to_date { background: rgba(63,185,80,0.15); color: var(--green); }
   .status-badge.behind { background: rgba(210,153,34,0.15); color: var(--yellow); }
   .status-badge.ahead { background: rgba(88,166,255,0.15); color: var(--accent); }
@@ -133,19 +191,26 @@
   .repo-meta {
     display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-secondary);
   }
-  .repo-meta span { display: flex; align-items: center; gap: 0.3rem; }
-  .arrow { color: var(--yellow); font-weight: bold; margin: 0 0.15rem; }
+  .repo-meta span {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+  }
+  .repo-meta span svg { width: 14px; height: 14px; }
 
   .commits-info {
     margin-top: 0.5rem;
     font-size: 0.8rem;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   .commits-info .behind-count { color: var(--yellow); font-weight: 600; }
   .commits-info .ahead-count { color: var(--accent); font-weight: 600; }
 
   .sync-btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     margin-top: 0.5rem;
     padding: 0.3rem 0.75rem;
     font-size: 0.75rem;
@@ -156,6 +221,7 @@
     text-decoration: none;
     transition: background 0.2s;
   }
+  .sync-btn svg { width: 14px; height: 14px; }
   .sync-btn:hover { background: rgba(88,166,255,0.25); }
 
   footer {
@@ -178,7 +244,6 @@
     border: 1px solid var(--border);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -187,6 +252,7 @@
     transition: opacity 0.3s, transform 0.3s;
     z-index: 1000;
   }
+  .back-to-top svg { width: 18px; height: 18px; }
   .back-to-top.visible {
     opacity: 1;
     transform: translateY(0);
@@ -211,27 +277,33 @@
 </head>
 <body>
 
-<h1>🍽️ Fork Update Monitor</h1>
+<h1><i data-lucide="git-fork"></i> Fork Update Monitor</h1>
 <p class="subtitle" id="subtitle">Loading...</p>
 
 <div class="stats" id="stats"></div>
 
-<input type="text" class="search-box" id="search" placeholder="Search repos..." />
+<div class="search-wrap" id="searchWrap">
+  <span class="search-icon"><i data-lucide="search"></i></span>
+  <input type="text" class="search-box" id="search" placeholder="Search repos..." />
+  <button class="clear-btn" id="clearSearch" title="Clear" aria-label="Clear search"><i data-lucide="x"></i></button>
+</div>
 
 <div class="filter-bar" id="filters"></div>
 
 <div id="repos"></div>
 
-<button class="back-to-top" id="backToTop" title="回顶部" aria-label="回到顶部">↑</button>
+<button class="back-to-top" id="backToTop" title="Back to top" aria-label="Back to top">
+  <i data-lucide="arrow-up"></i>
+</button>
 
 <footer>
-  Powered by GitHub Actions &amp; Pages · 
+  Powered by GitHub Actions &amp; Pages ·
   <span id="gen-time"></span>
 </footer>
 
 <script>
 const DATA = {
-  "generated_at": "2026-07-31T08:51:00.330603+00:00",
+  "generated_at": "2026-07-31T14:09:32.680935+00:00",
   "username": "haitai",
   "total_forks": 46,
   "status_counts": {
@@ -276,9 +348,9 @@ const DATA = {
       "parent_url": "https://github.com/MarSeventh/CloudFlare-ImgBed",
       "parent_description": "🏖️ A serverless, open-source file hosting solution built on Cloudflare. Supports image hosting, secure file storage, and personal cloud drive capabilities.",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T08:02:22Z",
+      "parent_updated_at": "2026-07-31T10:43:31Z",
       "parent_pushed_at": "2026-07-29T14:43:38Z",
-      "parent_stars": 6000,
+      "parent_stars": 6005,
       "parent_forks": 7505,
       "behind_by": 0,
       "ahead_by": 0,
@@ -297,11 +369,11 @@ const DATA = {
       "parent_url": "https://github.com/alam00000/bentopdf",
       "parent_description": "The Privacy First PDF Toolkit",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T07:54:37Z",
-      "parent_pushed_at": "2026-07-30T21:49:17Z",
-      "parent_stars": 14463,
-      "parent_forks": 1203,
-      "behind_by": 2,
+      "parent_updated_at": "2026-07-31T13:04:02Z",
+      "parent_pushed_at": "2026-07-31T12:08:24Z",
+      "parent_stars": 14465,
+      "parent_forks": 1204,
+      "behind_by": 3,
       "ahead_by": 26,
       "status": "diverged"
     },
@@ -318,10 +390,10 @@ const DATA = {
       "parent_url": "https://github.com/excalidraw/excalidraw",
       "parent_description": "Virtual whiteboard for sketching hand-drawn like diagrams",
       "parent_default_branch": "master",
-      "parent_updated_at": "2026-07-31T08:46:46Z",
-      "parent_pushed_at": "2026-07-30T11:30:20Z",
-      "parent_stars": 128714,
-      "parent_forks": 14644,
+      "parent_updated_at": "2026-07-31T14:08:16Z",
+      "parent_pushed_at": "2026-07-31T12:22:20Z",
+      "parent_stars": 128728,
+      "parent_forks": 14645,
       "behind_by": 3,
       "ahead_by": 0,
       "status": "behind"
@@ -339,10 +411,10 @@ const DATA = {
       "parent_url": "https://github.com/Brhiza/mingyu",
       "parent_description": "八字、紫微、星盘、六爻、梅花、奇门、大六壬、小六壬、塔罗、雷诺曼、灵签、择日一站式排盘，输出结构化提示词与数据。提供公开 API、MCP Server 与 skill。",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T08:18:50Z",
-      "parent_pushed_at": "2026-07-31T08:36:26Z",
-      "parent_stars": 223,
-      "parent_forks": 63,
+      "parent_updated_at": "2026-07-31T13:39:11Z",
+      "parent_pushed_at": "2026-07-31T13:20:07Z",
+      "parent_stars": 238,
+      "parent_forks": 71,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -360,10 +432,10 @@ const DATA = {
       "parent_url": "https://github.com/guokaigdg/animal-island-ui",
       "parent_description": "Animal Crossing-style React UI component library, inspired by Nintendo's game visuals Vue version available.  Animal 风格的 React 组件库 灵感来源于任天堂《集合啦！动物森友会》 Vue 版同步发布 ",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T06:02:19Z",
+      "parent_updated_at": "2026-07-31T14:05:39Z",
       "parent_pushed_at": "2026-07-30T15:12:04Z",
-      "parent_stars": 4073,
-      "parent_forks": 341,
+      "parent_stars": 4080,
+      "parent_forks": 343,
       "behind_by": 7,
       "ahead_by": 0,
       "status": "behind"
@@ -381,10 +453,10 @@ const DATA = {
       "parent_url": "https://github.com/JOYCEQL/magic-resume",
       "parent_description": "free online AI resume editor，the only official website is  https://magicv.art",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T08:43:26Z",
+      "parent_updated_at": "2026-07-31T13:17:56Z",
       "parent_pushed_at": "2026-07-27T15:01:27Z",
-      "parent_stars": 9338,
-      "parent_forks": 1038,
+      "parent_stars": 9355,
+      "parent_forks": 1040,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -402,11 +474,11 @@ const DATA = {
       "parent_url": "https://github.com/doocs/md",
       "parent_description": "✍ WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、自定义主题样式、内容管理、多图床、AI 助手等特性",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T03:09:41Z",
-      "parent_pushed_at": "2026-07-31T02:52:55Z",
-      "parent_stars": 13107,
+      "parent_updated_at": "2026-07-31T13:53:22Z",
+      "parent_pushed_at": "2026-07-31T13:54:49Z",
+      "parent_stars": 13109,
       "parent_forks": 2203,
-      "behind_by": 10,
+      "behind_by": 12,
       "ahead_by": 0,
       "status": "behind"
     },
@@ -468,7 +540,7 @@ const DATA = {
       "parent_updated_at": "2026-07-29T20:14:02Z",
       "parent_pushed_at": "2026-07-24T09:13:53Z",
       "parent_stars": 141,
-      "parent_forks": 19,
+      "parent_forks": 20,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -570,11 +642,11 @@ const DATA = {
       "parent_url": "https://github.com/nianzhibai/91",
       "parent_description": "nine one",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T08:42:13Z",
-      "parent_pushed_at": "2026-07-30T14:39:06Z",
-      "parent_stars": 1306,
-      "parent_forks": 357,
-      "behind_by": 40,
+      "parent_updated_at": "2026-07-31T14:02:40Z",
+      "parent_pushed_at": "2026-07-31T12:56:31Z",
+      "parent_stars": 1312,
+      "parent_forks": 358,
+      "behind_by": 44,
       "ahead_by": 0,
       "status": "behind"
     },
@@ -612,9 +684,9 @@ const DATA = {
       "parent_url": "https://github.com/Suvink/cut-it-out",
       "parent_description": "A browser based background removal tool for images.",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-30T09:58:25Z",
+      "parent_updated_at": "2026-07-31T08:52:14Z",
       "parent_pushed_at": "2025-12-13T14:38:10Z",
-      "parent_stars": 448,
+      "parent_stars": 447,
       "parent_forks": 59,
       "behind_by": 0,
       "ahead_by": 0,
@@ -636,7 +708,7 @@ const DATA = {
       "parent_updated_at": "2026-07-28T22:51:23Z",
       "parent_pushed_at": "2026-07-19T06:20:43Z",
       "parent_stars": 2075,
-      "parent_forks": 1044,
+      "parent_forks": 1042,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -654,10 +726,10 @@ const DATA = {
       "parent_url": "https://github.com/miantiao-me/Sink",
       "parent_description": "⚡ A Simple / Speedy / Secure Link Shortener with Analytics, 100% run on Cloudflare.",
       "parent_default_branch": "master",
-      "parent_updated_at": "2026-07-31T00:06:56Z",
+      "parent_updated_at": "2026-07-31T11:46:05Z",
       "parent_pushed_at": "2026-07-19T02:28:26Z",
-      "parent_stars": 6981,
-      "parent_forks": 5015,
+      "parent_stars": 6982,
+      "parent_forks": 5016,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -717,10 +789,10 @@ const DATA = {
       "parent_url": "https://github.com/ChatGPTNextWeb/NextChat",
       "parent_description": "✨ Light and Fast AI Assistant. Support: Web | iOS | MacOS | Android |  Linux | Windows",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-31T08:15:49Z",
+      "parent_updated_at": "2026-07-31T13:25:25Z",
       "parent_pushed_at": "2026-07-06T06:19:02Z",
-      "parent_stars": 88567,
-      "parent_forks": 59353,
+      "parent_stars": 88565,
+      "parent_forks": 59349,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -993,7 +1065,7 @@ const DATA = {
       "parent_updated_at": "2026-07-30T06:54:13Z",
       "parent_pushed_at": "2026-01-23T08:12:18Z",
       "parent_stars": 2568,
-      "parent_forks": 1702,
+      "parent_forks": 1701,
       "behind_by": 0,
       "ahead_by": 0,
       "status": "up_to_date"
@@ -1116,9 +1188,9 @@ const DATA = {
       "parent_url": "https://github.com/xxss0903/drawstamputils",
       "parent_description": "Draw Stamp Utils with Javascript",
       "parent_default_branch": "main",
-      "parent_updated_at": "2026-07-30T14:26:38Z",
+      "parent_updated_at": "2026-07-31T10:43:32Z",
       "parent_pushed_at": "2026-06-26T10:39:14Z",
-      "parent_stars": 1596,
+      "parent_stars": 1597,
       "parent_forks": 676,
       "behind_by": -1,
       "ahead_by": -1,
@@ -1211,63 +1283,95 @@ const DATA = {
   ]
 };
 
+const STATUS_ICONS = {
+  up_to_date: "check-circle-2",
+  behind: "arrow-down-circle",
+  ahead: "arrow-up-circle",
+  diverged: "git-compare-arrows",
+  unknown: "help-circle"
+};
+
 const STATUS_LABELS = {
-  up_to_date: "✅ Up to date",
-  behind: "⬇️ Behind",
-  ahead: "⬆️ Ahead",
-  diverged: "↔️ Diverged",
-  unknown: "❓ Unknown"
+  up_to_date: "Up to date",
+  behind: "Behind",
+  ahead: "Ahead",
+  diverged: "Diverged",
+  unknown: "Unknown"
 };
 
 const STATUS_ORDER = { behind: 0, diverged: 1, unknown: 2, ahead: 3, up_to_date: 4 };
 
 let currentFilter = "all";
 
+function icon(name) {
+  return '<i data-lucide="' + name + '"></i>';
+}
+
+function refreshIcons() {
+  if (window.lucide) lucide.createIcons();
+}
+
 function init() {
   const d = DATA;
   document.getElementById("subtitle").textContent =
-    `Monitoring ${d.username}'s forked repositories — ${d.total_forks} repos tracked`;
+    "Monitoring " + d.username + "'s forked repositories — " + d.total_forks + " repos tracked";
 
   // Stats
   const statsEl = document.getElementById("stats");
   const stats = [
-    { key: "total", label: "Total", val: d.total_forks },
-    { key: "behind", label: "Behind", val: d.status_counts.behind || 0 },
-    { key: "diverged", label: "Diverged", val: d.status_counts.diverged || 0 },
-    { key: "up-to-date", label: "Up to date", val: d.status_counts.up_to_date || 0 },
-    { key: "ahead", label: "Ahead", val: d.status_counts.ahead || 0 },
+    { key: "total", label: "Total", val: d.total_forks, icon: "git-fork" },
+    { key: "behind", label: "Behind", val: d.status_counts.behind || 0, icon: "arrow-down" },
+    { key: "diverged", label: "Diverged", val: d.status_counts.diverged || 0, icon: "git-compare-arrows" },
+    { key: "up-to-date", label: "Up to date", val: d.status_counts.up_to_date || 0, icon: "check" },
+    { key: "ahead", label: "Ahead", val: d.status_counts.ahead || 0, icon: "arrow-up" },
   ];
-  statsEl.innerHTML = stats.map(s =>
-    `<div class="stat-card ${s.key}"><div class="num">${s.val}</div><div class="label">${s.label}</div></div>`
-  ).join("");
+  statsEl.innerHTML = stats.map(function(s) {
+    return '<div class="stat-card ' + s.key + '">' +
+      '<div class="num">' + s.val + '</div>' +
+      '<div class="label">' + icon(s.icon) + ' ' + s.label + '</div>' +
+      '</div>';
+  }).join("");
 
   // Filters
   const filtersEl = document.getElementById("filters");
   const filterOptions = [
-    { key: "all", label: "All" },
-    { key: "behind", label: "⬇️ Behind" },
-    { key: "diverged", label: "↔️ Diverged" },
-    { key: "up_to_date", label: "✅ Up to date" },
-    { key: "ahead", label: "⬆️ Ahead" },
+    { key: "all", label: "All", icon: "list" },
+    { key: "behind", label: "Behind", icon: "arrow-down" },
+    { key: "diverged", label: "Diverged", icon: "git-compare-arrows" },
+    { key: "up_to_date", label: "Up to date", icon: "check" },
+    { key: "ahead", label: "Ahead", icon: "arrow-up" },
   ];
-  filtersEl.innerHTML = filterOptions.map(f =>
-    `<button class="filter-btn${f.key === "all" ? " active" : ""}" data-filter="${f.key}">${f.label}</button>`
-  ).join("");
-  filtersEl.addEventListener("click", e => {
+  filtersEl.innerHTML = filterOptions.map(function(f) {
+    return '<button class="filter-btn' + (f.key === "all" ? " active" : "") + '" data-filter="' + f.key + '">' +
+      icon(f.icon) + ' ' + f.label + '</button>';
+  }).join("");
+  filtersEl.addEventListener("click", function(e) {
     if (!e.target.classList.contains("filter-btn")) return;
-    filtersEl.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    filtersEl.querySelectorAll(".filter-btn").forEach(function(b) { b.classList.remove("active"); });
     e.target.classList.add("active");
     currentFilter = e.target.dataset.filter;
     renderRepos();
   });
 
   // Search
-  document.getElementById("search").addEventListener("input", renderRepos);
+  const searchInput = document.getElementById("search");
+  const searchWrap = document.getElementById("searchWrap");
+  const clearBtn = document.getElementById("clearSearch");
+  searchInput.addEventListener("input", function() {
+    searchWrap.classList.toggle("has-text", searchInput.value.length > 0);
+    renderRepos();
+  });
+  clearBtn.addEventListener("click", function() {
+    searchInput.value = "";
+    searchWrap.classList.remove("has-text");
+    searchInput.focus();
+    renderRepos();
+  });
 
   // Time
   const genTime = new Date(d.generated_at);
   document.getElementById("gen-time").textContent =
-    `Last updated: ${genTime.toLocaleString()} (UTC)`;
+    "Last updated: " + genTime.toLocaleString() + " (UTC)";
 
   renderRepos();
 }
@@ -1276,72 +1380,76 @@ function renderRepos() {
   const query = document.getElementById("search").value.toLowerCase();
   let repos = DATA.repos.slice();
 
-  // Filter
   if (currentFilter !== "all") {
-    repos = repos.filter(r => r.status === currentFilter);
+    repos = repos.filter(function(r) { return r.status === currentFilter; });
   }
 
-  // Search
   if (query) {
-    repos = repos.filter(r =>
-      r.fork_repo.toLowerCase().includes(query) ||
-      r.parent_repo.toLowerCase().includes(query) ||
-      (r.fork_description || "").toLowerCase().includes(query)
-    );
+    repos = repos.filter(function(r) {
+      return r.fork_repo.toLowerCase().includes(query) ||
+        r.parent_repo.toLowerCase().includes(query) ||
+        (r.fork_description || "").toLowerCase().includes(query);
+    });
   }
 
-  // Sort: behind first, then diverged, unknown, ahead, up_to_date
-  repos.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
+  repos.sort(function(a, b) {
+    return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+  });
 
   const container = document.getElementById("repos");
   if (repos.length === 0) {
     container.innerHTML = '<div class="empty-state">No repositories match the current filter.</div>';
+    refreshIcons();
     return;
   }
 
-  container.innerHTML = repos.map(r => {
+  container.innerHTML = repos.map(function(r) {
     const shortFork = r.fork_repo.split("/")[1];
     const shortParent = r.parent_repo.split("/")[1];
     const desc = r.fork_description || r.parent_description || "";
-    const syncUrl = `https://github.com/${r.fork_repo}`;
+    const syncUrl = "https://github.com/" + r.fork_repo;
     const forkUpdated = r.fork_pushed_at ? formatDate(r.fork_pushed_at) : "N/A";
     const parentUpdated = r.parent_pushed_at ? formatDate(r.parent_pushed_at) : "N/A";
 
     let commitsHtml = "";
     if (r.behind_by > 0 || r.ahead_by > 0) {
-      commitsHtml = `<div class="commits-info">`;
-      if (r.behind_by > 0) commitsHtml += `<span class="behind-count">${r.behind_by}</span> commit(s) behind upstream`;
+      commitsHtml = '<div class="commits-info">';
+      if (r.behind_by > 0) commitsHtml += '<span class="behind-count">' + r.behind_by + '</span> commit(s) behind upstream';
       if (r.behind_by > 0 && r.ahead_by > 0) commitsHtml += " · ";
-      if (r.ahead_by > 0) commitsHtml += `<span class="ahead-count">${r.ahead_by}</span> commit(s) ahead`;
-      commitsHtml += `</div>`;
+      if (r.ahead_by > 0) commitsHtml += '<span class="ahead-count">' + r.ahead_by + '</span> commit(s) ahead';
+      commitsHtml += '</div>';
     }
 
     let syncBtn = "";
     if (r.status === "behind" || r.status === "diverged") {
-      syncBtn = `<a class="sync-btn" href="${syncUrl}" target="_blank" rel="noopener">🔄 Sync fork</a>`;
+      syncBtn = '<a class="sync-btn" href="' + syncUrl + '" target="_blank" rel="noopener">' +
+        icon("refresh-cw") + ' Sync fork</a>';
     }
 
-    return `
-      <div class="repo-card status-${r.status}">
-        <div class="repo-header">
-          <div class="repo-name">
-            <a href="${r.fork_url}" target="_blank" rel="noopener">${shortFork}</a>
-            <span class="arrow">←</span>
-            <a href="${r.parent_url}" target="_blank" rel="noopener" style="color:var(--text-secondary)">${shortParent}</a>
-          </div>
-          <span class="status-badge ${r.status}">${STATUS_LABELS[r.status] || r.status}</span>
-        </div>
-        ${desc ? `<div class="repo-desc">${escHtml(desc)}</div>` : ""}
-        <div class="repo-meta">
-          <span>🍴 Fork: ${forkUpdated}</span>
-          <span>🏠 Upstream: ${parentUpdated}</span>
-          ${r.parent_stars ? `<span>⭐ ${r.parent_stars}</span>` : ""}
-        </div>
-        ${commitsHtml}
-        ${syncBtn}
-      </div>
-    `;
+    const statusIconName = STATUS_ICONS[r.status] || "help-circle";
+    const statusLabel = STATUS_LABELS[r.status] || r.status;
+
+    return '<div class="repo-card status-' + r.status + '">' +
+      '<div class="repo-header">' +
+        '<div class="repo-name">' +
+          '<a href="' + r.fork_url + '" target="_blank" rel="noopener">' + shortFork + '</a>' +
+          '<span class="arrow-icon">' + icon("arrow-left") + '</span>' +
+          '<a href="' + r.parent_url + '" target="_blank" rel="noopener" style="color:var(--text-secondary)">' + shortParent + '</a>' +
+        '</div>' +
+        '<span class="status-badge ' + r.status + '">' + icon(statusIconName) + ' ' + statusLabel + '</span>' +
+      '</div>' +
+      (desc ? '<div class="repo-desc">' + escHtml(desc) + '</div>' : '') +
+      '<div class="repo-meta">' +
+        '<span>' + icon("git-fork") + ' Fork: ' + forkUpdated + '</span>' +
+        '<span>' + icon("home") + ' Upstream: ' + parentUpdated + '</span>' +
+        (r.parent_stars ? '<span>' + icon("star") + ' ' + r.parent_stars + '</span>' : '') +
+      '</div>' +
+      commitsHtml +
+      syncBtn +
+    '</div>';
   }).join("");
+
+  refreshIcons();
 }
 
 function formatDate(isoStr) {
@@ -1352,9 +1460,9 @@ function formatDate(isoStr) {
     const diffDays = Math.floor(diffMs / 86400000);
     if (diffDays === 0) return "today";
     if (diffDays === 1) return "yesterday";
-    if (diffDays < 30) return `${diffDays}d ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-    return `${Math.floor(diffDays / 365)}y ago`;
+    if (diffDays < 30) return diffDays + "d ago";
+    if (diffDays < 365) return Math.floor(diffDays / 30) + "mo ago";
+    return Math.floor(diffDays / 365) + "y ago";
   } catch {
     return isoStr;
   }
@@ -1366,19 +1474,19 @@ function escHtml(s) {
   return div.innerHTML;
 }
 
-
 // Back to top
 (function() {
   const btn = document.getElementById("backToTop");
-  window.addEventListener("scroll", () => {
+  window.addEventListener("scroll", function() {
     btn.classList.toggle("visible", window.scrollY > 400);
   });
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", function() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 })();
 
 init();
+refreshIcons();
 </script>
 </body>
 </html>
