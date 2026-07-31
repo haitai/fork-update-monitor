@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="/favicon.png">
 <title>Fork Repos Update Monitor</title>
+<script src="https://unpkg.com/lucide@latest"></script>
 <style>
   :root {
     --bg: #0d1117;
@@ -17,6 +18,7 @@
     --yellow: #d29922;
     --red: #f85149;
     --purple: #bc8cff;
+    --icon-size: 16px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -28,7 +30,14 @@
     max-width: 960px;
     margin: 0 auto;
   }
-  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  h1 svg { width: 24px; height: 24px; }
   .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem; }
 
   /* Stats bar */
@@ -45,7 +54,12 @@
     text-align: center;
   }
   .stat-card .num { font-size: 1.75rem; font-weight: 700; }
-  .stat-card .label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .label {
+    font-size: 0.75rem; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  }
+  .stat-card .label svg { width: 13px; height: 13px; }
   .stat-card.up-to-date .num { color: var(--green); }
   .stat-card.behind .num { color: var(--yellow); }
   .stat-card.ahead .num { color: var(--accent); }
@@ -65,20 +79,37 @@
     cursor: pointer;
     font-size: 0.8rem;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
   }
+  .filter-btn svg { width: 14px; height: 14px; }
   .filter-btn:hover { border-color: var(--accent); color: var(--text); }
   .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   /* Search */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .search-wrap .search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    display: flex;
+  }
+  .search-wrap .search-icon svg { width: 16px; height: 16px; }
   .search-box {
     width: 100%;
-    padding: 0.6rem 1rem;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
     font-size: 0.9rem;
-    margin-bottom: 1.5rem;
     outline: none;
   }
   .search-box:focus { border-color: var(--accent); }
@@ -106,9 +137,15 @@
   }
   .repo-name {
     font-size: 1rem; font-weight: 600;
+    display: flex; align-items: center; gap: 0.4rem;
   }
   .repo-name a { color: var(--accent); text-decoration: none; }
   .repo-name a:hover { text-decoration: underline; }
+  .repo-name .arrow-icon {
+    color: var(--yellow);
+    display: inline-flex;
+  }
+  .repo-name .arrow-icon svg { width: 14px; height: 14px; }
 
   .status-badge {
     font-size: 0.7rem;
@@ -118,7 +155,11 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
   }
+  .status-badge svg { width: 12px; height: 12px; }
   .status-badge.up_to_date { background: rgba(63,185,80,0.15); color: var(--green); }
   .status-badge.behind { background: rgba(210,153,34,0.15); color: var(--yellow); }
   .status-badge.ahead { background: rgba(88,166,255,0.15); color: var(--accent); }
@@ -133,19 +174,26 @@
   .repo-meta {
     display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-secondary);
   }
-  .repo-meta span { display: flex; align-items: center; gap: 0.3rem; }
-  .arrow { color: var(--yellow); font-weight: bold; margin: 0 0.15rem; }
+  .repo-meta span {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+  }
+  .repo-meta span svg { width: 14px; height: 14px; }
 
   .commits-info {
     margin-top: 0.5rem;
     font-size: 0.8rem;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
   .commits-info .behind-count { color: var(--yellow); font-weight: 600; }
   .commits-info .ahead-count { color: var(--accent); font-weight: 600; }
 
   .sync-btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     margin-top: 0.5rem;
     padding: 0.3rem 0.75rem;
     font-size: 0.75rem;
@@ -156,6 +204,7 @@
     text-decoration: none;
     transition: background 0.2s;
   }
+  .sync-btn svg { width: 14px; height: 14px; }
   .sync-btn:hover { background: rgba(88,166,255,0.25); }
 
   footer {
@@ -178,7 +227,6 @@
     border: 1px solid var(--border);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -187,6 +235,7 @@
     transition: opacity 0.3s, transform 0.3s;
     z-index: 1000;
   }
+  .back-to-top svg { width: 18px; height: 18px; }
   .back-to-top.visible {
     opacity: 1;
     transform: translateY(0);
@@ -211,72 +260,97 @@
 </head>
 <body>
 
-<h1>🍽️ Fork Update Monitor</h1>
+<h1><i data-lucide="git-fork"></i> Fork Update Monitor</h1>
 <p class="subtitle" id="subtitle">Loading...</p>
 
 <div class="stats" id="stats"></div>
 
-<input type="text" class="search-box" id="search" placeholder="Search repos..." />
+<div class="search-wrap">
+  <span class="search-icon"><i data-lucide="search"></i></span>
+  <input type="text" class="search-box" id="search" placeholder="Search repos..." />
+</div>
 
 <div class="filter-bar" id="filters"></div>
 
 <div id="repos"></div>
 
-<button class="back-to-top" id="backToTop" title="回顶部" aria-label="回到顶部">↑</button>
+<button class="back-to-top" id="backToTop" title="Back to top" aria-label="Back to top">
+  <i data-lucide="arrow-up"></i>
+</button>
 
 <footer>
-  Powered by GitHub Actions &amp; Pages · 
+  Powered by GitHub Actions &amp; Pages ·
   <span id="gen-time"></span>
 </footer>
 
 <script>
 const DATA = {{DATA_PLACEHOLDER}};
 
+const STATUS_ICONS = {
+  up_to_date: "check-circle-2",
+  behind: "arrow-down-circle",
+  ahead: "arrow-up-circle",
+  diverged: "git-compare-arrows",
+  unknown: "help-circle"
+};
+
 const STATUS_LABELS = {
-  up_to_date: "✅ Up to date",
-  behind: "⬇️ Behind",
-  ahead: "⬆️ Ahead",
-  diverged: "↔️ Diverged",
-  unknown: "❓ Unknown"
+  up_to_date: "Up to date",
+  behind: "Behind",
+  ahead: "Ahead",
+  diverged: "Diverged",
+  unknown: "Unknown"
 };
 
 const STATUS_ORDER = { behind: 0, diverged: 1, unknown: 2, ahead: 3, up_to_date: 4 };
 
 let currentFilter = "all";
 
+function icon(name) {
+  return '<i data-lucide="' + name + '"></i>';
+}
+
+function refreshIcons() {
+  if (window.lucide) lucide.createIcons();
+}
+
 function init() {
   const d = DATA;
   document.getElementById("subtitle").textContent =
-    `Monitoring ${d.username}'s forked repositories — ${d.total_forks} repos tracked`;
+    "Monitoring " + d.username + "'s forked repositories — " + d.total_forks + " repos tracked";
 
   // Stats
   const statsEl = document.getElementById("stats");
   const stats = [
-    { key: "total", label: "Total", val: d.total_forks },
-    { key: "behind", label: "Behind", val: d.status_counts.behind || 0 },
-    { key: "diverged", label: "Diverged", val: d.status_counts.diverged || 0 },
-    { key: "up-to-date", label: "Up to date", val: d.status_counts.up_to_date || 0 },
-    { key: "ahead", label: "Ahead", val: d.status_counts.ahead || 0 },
+    { key: "total", label: "Total", val: d.total_forks, icon: "git-fork" },
+    { key: "behind", label: "Behind", val: d.status_counts.behind || 0, icon: "arrow-down" },
+    { key: "diverged", label: "Diverged", val: d.status_counts.diverged || 0, icon: "git-compare-arrows" },
+    { key: "up-to-date", label: "Up to date", val: d.status_counts.up_to_date || 0, icon: "check" },
+    { key: "ahead", label: "Ahead", val: d.status_counts.ahead || 0, icon: "arrow-up" },
   ];
-  statsEl.innerHTML = stats.map(s =>
-    `<div class="stat-card ${s.key}"><div class="num">${s.val}</div><div class="label">${s.label}</div></div>`
-  ).join("");
+  statsEl.innerHTML = stats.map(function(s) {
+    return '<div class="stat-card ' + s.key + '">' +
+      '<div class="num">' + s.val + '</div>' +
+      '<div class="label">' + icon(s.icon) + ' ' + s.label + '</div>' +
+      '</div>';
+  }).join("");
 
   // Filters
   const filtersEl = document.getElementById("filters");
   const filterOptions = [
-    { key: "all", label: "All" },
-    { key: "behind", label: "⬇️ Behind" },
-    { key: "diverged", label: "↔️ Diverged" },
-    { key: "up_to_date", label: "✅ Up to date" },
-    { key: "ahead", label: "⬆️ Ahead" },
+    { key: "all", label: "All", icon: "list" },
+    { key: "behind", label: "Behind", icon: "arrow-down" },
+    { key: "diverged", label: "Diverged", icon: "git-compare-arrows" },
+    { key: "up_to_date", label: "Up to date", icon: "check" },
+    { key: "ahead", label: "Ahead", icon: "arrow-up" },
   ];
-  filtersEl.innerHTML = filterOptions.map(f =>
-    `<button class="filter-btn${f.key === "all" ? " active" : ""}" data-filter="${f.key}">${f.label}</button>`
-  ).join("");
-  filtersEl.addEventListener("click", e => {
+  filtersEl.innerHTML = filterOptions.map(function(f) {
+    return '<button class="filter-btn' + (f.key === "all" ? " active" : "") + '" data-filter="' + f.key + '">' +
+      icon(f.icon) + ' ' + f.label + '</button>';
+  }).join("");
+  filtersEl.addEventListener("click", function(e) {
     if (!e.target.classList.contains("filter-btn")) return;
-    filtersEl.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    filtersEl.querySelectorAll(".filter-btn").forEach(function(b) { b.classList.remove("active"); });
     e.target.classList.add("active");
     currentFilter = e.target.dataset.filter;
     renderRepos();
@@ -288,7 +362,7 @@ function init() {
   // Time
   const genTime = new Date(d.generated_at);
   document.getElementById("gen-time").textContent =
-    `Last updated: ${genTime.toLocaleString()} (UTC)`;
+    "Last updated: " + genTime.toLocaleString() + " (UTC)";
 
   renderRepos();
 }
@@ -297,72 +371,76 @@ function renderRepos() {
   const query = document.getElementById("search").value.toLowerCase();
   let repos = DATA.repos.slice();
 
-  // Filter
   if (currentFilter !== "all") {
-    repos = repos.filter(r => r.status === currentFilter);
+    repos = repos.filter(function(r) { return r.status === currentFilter; });
   }
 
-  // Search
   if (query) {
-    repos = repos.filter(r =>
-      r.fork_repo.toLowerCase().includes(query) ||
-      r.parent_repo.toLowerCase().includes(query) ||
-      (r.fork_description || "").toLowerCase().includes(query)
-    );
+    repos = repos.filter(function(r) {
+      return r.fork_repo.toLowerCase().includes(query) ||
+        r.parent_repo.toLowerCase().includes(query) ||
+        (r.fork_description || "").toLowerCase().includes(query);
+    });
   }
 
-  // Sort: behind first, then diverged, unknown, ahead, up_to_date
-  repos.sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9));
+  repos.sort(function(a, b) {
+    return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+  });
 
   const container = document.getElementById("repos");
   if (repos.length === 0) {
     container.innerHTML = '<div class="empty-state">No repositories match the current filter.</div>';
+    refreshIcons();
     return;
   }
 
-  container.innerHTML = repos.map(r => {
+  container.innerHTML = repos.map(function(r) {
     const shortFork = r.fork_repo.split("/")[1];
     const shortParent = r.parent_repo.split("/")[1];
     const desc = r.fork_description || r.parent_description || "";
-    const syncUrl = `https://github.com/${r.fork_repo}`;
+    const syncUrl = "https://github.com/" + r.fork_repo;
     const forkUpdated = r.fork_pushed_at ? formatDate(r.fork_pushed_at) : "N/A";
     const parentUpdated = r.parent_pushed_at ? formatDate(r.parent_pushed_at) : "N/A";
 
     let commitsHtml = "";
     if (r.behind_by > 0 || r.ahead_by > 0) {
-      commitsHtml = `<div class="commits-info">`;
-      if (r.behind_by > 0) commitsHtml += `<span class="behind-count">${r.behind_by}</span> commit(s) behind upstream`;
+      commitsHtml = '<div class="commits-info">';
+      if (r.behind_by > 0) commitsHtml += '<span class="behind-count">' + r.behind_by + '</span> commit(s) behind upstream';
       if (r.behind_by > 0 && r.ahead_by > 0) commitsHtml += " · ";
-      if (r.ahead_by > 0) commitsHtml += `<span class="ahead-count">${r.ahead_by}</span> commit(s) ahead`;
-      commitsHtml += `</div>`;
+      if (r.ahead_by > 0) commitsHtml += '<span class="ahead-count">' + r.ahead_by + '</span> commit(s) ahead';
+      commitsHtml += '</div>';
     }
 
     let syncBtn = "";
     if (r.status === "behind" || r.status === "diverged") {
-      syncBtn = `<a class="sync-btn" href="${syncUrl}" target="_blank" rel="noopener">🔄 Sync fork</a>`;
+      syncBtn = '<a class="sync-btn" href="' + syncUrl + '" target="_blank" rel="noopener">' +
+        icon("refresh-cw") + ' Sync fork</a>';
     }
 
-    return `
-      <div class="repo-card status-${r.status}">
-        <div class="repo-header">
-          <div class="repo-name">
-            <a href="${r.fork_url}" target="_blank" rel="noopener">${shortFork}</a>
-            <span class="arrow">←</span>
-            <a href="${r.parent_url}" target="_blank" rel="noopener" style="color:var(--text-secondary)">${shortParent}</a>
-          </div>
-          <span class="status-badge ${r.status}">${STATUS_LABELS[r.status] || r.status}</span>
-        </div>
-        ${desc ? `<div class="repo-desc">${escHtml(desc)}</div>` : ""}
-        <div class="repo-meta">
-          <span>🍴 Fork: ${forkUpdated}</span>
-          <span>🏠 Upstream: ${parentUpdated}</span>
-          ${r.parent_stars ? `<span>⭐ ${r.parent_stars}</span>` : ""}
-        </div>
-        ${commitsHtml}
-        ${syncBtn}
-      </div>
-    `;
+    const statusIconName = STATUS_ICONS[r.status] || "help-circle";
+    const statusLabel = STATUS_LABELS[r.status] || r.status;
+
+    return '<div class="repo-card status-' + r.status + '">' +
+      '<div class="repo-header">' +
+        '<div class="repo-name">' +
+          '<a href="' + r.fork_url + '" target="_blank" rel="noopener">' + shortFork + '</a>' +
+          '<span class="arrow-icon">' + icon("arrow-left") + '</span>' +
+          '<a href="' + r.parent_url + '" target="_blank" rel="noopener" style="color:var(--text-secondary)">' + shortParent + '</a>' +
+        '</div>' +
+        '<span class="status-badge ' + r.status + '">' + icon(statusIconName) + ' ' + statusLabel + '</span>' +
+      '</div>' +
+      (desc ? '<div class="repo-desc">' + escHtml(desc) + '</div>' : '') +
+      '<div class="repo-meta">' +
+        '<span>' + icon("git-fork") + ' Fork: ' + forkUpdated + '</span>' +
+        '<span>' + icon("home") + ' Upstream: ' + parentUpdated + '</span>' +
+        (r.parent_stars ? '<span>' + icon("star") + ' ' + r.parent_stars + '</span>' : '') +
+      '</div>' +
+      commitsHtml +
+      syncBtn +
+    '</div>';
   }).join("");
+
+  refreshIcons();
 }
 
 function formatDate(isoStr) {
@@ -373,9 +451,9 @@ function formatDate(isoStr) {
     const diffDays = Math.floor(diffMs / 86400000);
     if (diffDays === 0) return "today";
     if (diffDays === 1) return "yesterday";
-    if (diffDays < 30) return `${diffDays}d ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
-    return `${Math.floor(diffDays / 365)}y ago`;
+    if (diffDays < 30) return diffDays + "d ago";
+    if (diffDays < 365) return Math.floor(diffDays / 30) + "mo ago";
+    return Math.floor(diffDays / 365) + "y ago";
   } catch {
     return isoStr;
   }
@@ -387,19 +465,19 @@ function escHtml(s) {
   return div.innerHTML;
 }
 
-
 // Back to top
 (function() {
   const btn = document.getElementById("backToTop");
-  window.addEventListener("scroll", () => {
+  window.addEventListener("scroll", function() {
     btn.classList.toggle("visible", window.scrollY > 400);
   });
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", function() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 })();
 
 init();
+refreshIcons();
 </script>
 </body>
 </html>
