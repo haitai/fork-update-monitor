@@ -102,6 +102,23 @@
     display: flex;
   }
   .search-wrap .search-icon svg { width: 16px; height: 16px; }
+  .search-wrap .clear-btn {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    padding: 0.2rem;
+    border-radius: 4px;
+  }
+  .search-wrap .clear-btn svg { width: 16px; height: 16px; }
+  .search-wrap .clear-btn:hover { color: var(--text); background: var(--border); }
+  .search-wrap.has-text .clear-btn { display: flex; }
   .search-box {
     width: 100%;
     padding: 0.6rem 1rem 0.6rem 2.5rem;
@@ -265,9 +282,10 @@
 
 <div class="stats" id="stats"></div>
 
-<div class="search-wrap">
+<div class="search-wrap" id="searchWrap">
   <span class="search-icon"><i data-lucide="search"></i></span>
   <input type="text" class="search-box" id="search" placeholder="Search repos..." />
+  <button class="clear-btn" id="clearSearch" title="Clear" aria-label="Clear search"><i data-lucide="x"></i></button>
 </div>
 
 <div class="filter-bar" id="filters"></div>
@@ -357,7 +375,19 @@ function init() {
   });
 
   // Search
-  document.getElementById("search").addEventListener("input", renderRepos);
+  const searchInput = document.getElementById("search");
+  const searchWrap = document.getElementById("searchWrap");
+  const clearBtn = document.getElementById("clearSearch");
+  searchInput.addEventListener("input", function() {
+    searchWrap.classList.toggle("has-text", searchInput.value.length > 0);
+    renderRepos();
+  });
+  clearBtn.addEventListener("click", function() {
+    searchInput.value = "";
+    searchWrap.classList.remove("has-text");
+    searchInput.focus();
+    renderRepos();
+  });
 
   // Time
   const genTime = new Date(d.generated_at);
