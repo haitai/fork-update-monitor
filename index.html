@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/favicon.png">
+<title>Fork Repos Update Monitor</title>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-secondary: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --icon-size: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  h1 svg { width: 24px; height: 24px; }
+  .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem; }
+
+  /* Stats bar */
+  .stats {
+    display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+  .stat-card .num { font-size: 1.75rem; font-weight: 700; }
+  .stat-card .label {
+    font-size: 0.75rem; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  }
+  .stat-card .label svg { width: 13px; height: 13px; }
+  .stat-card.up-to-date .num { color: var(--green); }
+  .stat-card.behind .num { color: var(--yellow); }
+  .stat-card.ahead .num { color: var(--accent); }
+  .stat-card.diverged .num { color: var(--red); }
+  .stat-card.total .num { color: var(--purple); }
+
+  /* Filter */
+  .filter-bar {
+    display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+  }
+  .filter-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.35rem 0.9rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .filter-btn svg { width: 14px; height: 14px; }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .search-wrap .search-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    display: flex;
+  }
+  .search-wrap .search-icon svg { width: 16px; height: 16px; }
+  .search-wrap .clear-btn {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    padding: 0.2rem;
+    border-radius: 4px;
+  }
+  .search-wrap .clear-btn svg { width: 16px; height: 16px; }
+  .search-wrap .clear-btn:hover { color: var(--text); background: var(--border); }
+  .search-wrap.has-text .clear-btn { display: flex; }
+  .search-box {
+    width: 100%;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text-secondary); }
+
+  /* Repo card */
+  .repo-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+  }
+  .repo-card:hover { border-color: var(--accent); }
+  .repo-card.status-behind { border-left: 3px solid var(--yellow); }
+  .repo-card.status-diverged { border-left: 3px solid var(--red); }
+  .repo-card.status-ahead { border-left: 3px solid var(--accent); }
+  .repo-card.status-up_to_date { border-left: 3px solid var(--green); }
+  .repo-card.status-unknown { border-left: 3px solid var(--text-secondary); }
+
+  .repo-header {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .repo-name {
+    font-size: 1rem; font-weight: 600;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .repo-name a { color: var(--accent); text-decoration: none; }
+  .repo-name a:hover { text-decoration: underline; }
+  .repo-name .arrow-icon {
+    color: var(--yellow);
+    display: inline-flex;
+  }
+  .repo-name .arrow-icon svg { width: 14px; height: 14px; }
+
+  .status-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .status-badge svg { width: 12px; height: 12px; }
+  .status-badge.up_to_date { background: rgba(63,185,80,0.15); color: var(--green); }
+  .status-badge.behind { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .status-badge.ahead { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .status-badge.diverged { background: rgba(248,81,73,0.15); color: var(--red); }
+  .status-badge.unknown { background: rgba(139,148,158,0.15); color: var(--text-secondary); }
+
+  .repo-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+  .repo-meta {
+    display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-secondary);
+  }
+  .repo-meta span {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+  }
+  .repo-meta span svg { width: 14px; height: 14px; }
+
+  .commits-info {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .commits-info .behind-count { color: var(--yellow); font-weight: 600; }
+  .commits-info .ahead-count { color: var(--accent); font-weight: 600; }
+
+  .sync-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    background: rgba(88,166,255,0.1);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .sync-btn svg { width: 14px; height: 14px; }
+  .sync-btn:hover { background: rgba(88,166,255,0.25); }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    position: relative;
+  }
+  .back-to-top {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 1000;
+  }
+  .back-to-top svg { width: 18px; height: 18px; }
+  .back-to-top.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .back-to-top:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 1rem 0.75rem; }
+    .stat-card { min-width: 90px; padding: 0.5rem 0.75rem; }
+    .stat-card .num { font-size: 1.25rem; }
+    .repo-header { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<h1><i data-lucide="git-fork"></i> Fork Update Monitor</h1>
+<p class="subtitle" id="subtitle">Loading...</p>
+
+<div class="stats" id="stats"></div>
+
+<div class="search-wrap" id="searchWrap">
+  <span class="search-icon"><i data-lucide="search"></i></span>
+  <input type="text" class="search-box" id="search" placeholder="Search repos..." />
+  <button class="clear-btn" id="clearSearch" title="Clear" aria-label="Clear search"><i data-lucide="x"></i></button>
+</div>
+
+<div class="filter-bar" id="filters"></div>
+
+<div id="repos"></div>
+
+<button class="back-to-top" id="backToTop" title="Back to top" aria-label="Back to top">
+  <i data-lucide="arrow-up"></i>
+</button>
+
+<footer>
+  Powered by GitHub Actions &amp; Pages ·
+  <span id="gen-time"></span>
+</footer>
+
+<script>
+const DATA = {
+  "generated_at": "2026-09-06T20:06:16.220792+00:00",
+  "username": "haitai",
+  "total_forks": 45,
+  "status_counts": {
+    "up_to_date": 23,
+    "behind": 8,
+    "ahead": 11,
+    "diverged": 3,
+    "unknown": 0
+  },
+  "repos": [
+    {
+      "fork_repo": "haitai/weread-notes",
+      "fork_url": "https://github.com/haitai/weread-notes",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-09-06T19:59:39Z",
+      "fork_pushed_at": "2026-09-06T19:59:36Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "f-a8bfe3fa/weread-notes",
+      "parent_url": "https://github.com/f-a8bfe3fa/weread-notes",
+      "parent_description": "notion模板",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-02T00:20:36Z",
+      "parent_pushed_at": "2026-09-04T03:43:17Z",
+      "parent_stars": 7,
+      "parent_forks": 2,
+      "behind_by": 58,
+      "ahead_by": 242,
+      "status": "diverged"
+    },
+    {
+      "fork_repo": "haitai/astro-chiri",
+      "fork_url": "https://github.com/haitai/astro-chiri",
+      "fork_description": "Minimal blog theme built with Astro.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-09-05T03:48:16Z",
+      "fork_pushed_at": "2026-09-05T03:48:11Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "the3ash/astro-chiri",
+      "parent_url": "https://github.com/the3ash/astro-chiri",
+      "parent_description": "Minimal blog theme built with Astro.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-03T14:56:21Z",
+      "parent_pushed_at": "2026-08-31T13:48:06Z",
+      "parent_stars": 318,
+      "parent_forks": 98,
+      "behind_by": 0,
+      "ahead_by": 5,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/joplin-web-app",
+      "fork_url": "https://github.com/haitai/joplin-web-app",
+      "fork_description": "Joplin web app (beta)",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-09-05T01:20:38Z",
+      "fork_pushed_at": "2026-09-05T01:20:34Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "joplin/web-app",
+      "parent_url": "https://github.com/joplin/web-app",
+      "parent_description": "Joplin web app",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-04T11:53:24Z",
+      "parent_pushed_at": "2026-09-04T11:52:30Z",
+      "parent_stars": 63,
+      "parent_forks": 11,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/emdash-templates",
+      "fork_url": "https://github.com/haitai/emdash-templates",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-09-02T07:08:18Z",
+      "fork_pushed_at": "2026-09-02T07:08:15Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "emdash-cms/templates",
+      "parent_url": "https://github.com/emdash-cms/templates",
+      "parent_description": "Starter templates for EmDash CMS. Auto-synced from emdash-cms/emdash — open PRs there, not here.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-01T18:14:04Z",
+      "parent_pushed_at": "2026-09-01T18:04:04Z",
+      "parent_stars": 36,
+      "parent_forks": 18,
+      "behind_by": 0,
+      "ahead_by": 3,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/md",
+      "fork_url": "https://github.com/haitai/md",
+      "fork_description": "✍ WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、色盘取色、多图上传、一键下载文档、自定义 CSS 样式、一键重置等特性",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-09-01T06:28:44Z",
+      "fork_pushed_at": "2026-09-01T06:26:30Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "doocs/md",
+      "parent_url": "https://github.com/doocs/md",
+      "parent_description": "✍ WeChat Markdown Editor | 一款高度简洁的微信 Markdown 编辑器：支持 Markdown 语法、自定义主题样式、内容管理、多图床、AI 助手等特性",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T15:02:36Z",
+      "parent_pushed_at": "2026-09-05T00:58:37Z",
+      "parent_stars": 13284,
+      "parent_forks": 2228,
+      "behind_by": 2,
+      "ahead_by": 0,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/CloudFlare-ImgBed",
+      "fork_url": "https://github.com/haitai/CloudFlare-ImgBed",
+      "fork_description": "CloudFlare 图床，基于 CloudFlare Pages 的免费图片托管解决方案，支持 Telegram Bot 和 Cloudflare R2 等多种存储方式！",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-09-01T04:41:34Z",
+      "fork_pushed_at": "2026-09-01T04:40:22Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "MarSeventh/CloudFlare-ImgBed",
+      "parent_url": "https://github.com/MarSeventh/CloudFlare-ImgBed",
+      "parent_description": "🏖️ A serverless, open-source file hosting solution built on Cloudflare. Supports image hosting, secure file storage, and personal cloud drive capabilities.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T18:38:29Z",
+      "parent_pushed_at": "2026-08-31T12:55:06Z",
+      "parent_stars": 6397,
+      "parent_forks": 8072,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/TarotWhisper",
+      "fork_url": "https://github.com/haitai/TarotWhisper",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-31T06:34:54Z",
+      "fork_pushed_at": "2026-08-31T06:32:46Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "J-York/TarotWhisper",
+      "parent_url": "https://github.com/J-York/TarotWhisper",
+      "parent_description": "",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-29T09:15:48Z",
+      "parent_pushed_at": "2026-08-29T09:14:41Z",
+      "parent_stars": 35,
+      "parent_forks": 20,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/exif-photo-blog",
+      "fork_url": "https://github.com/haitai/exif-photo-blog",
+      "fork_description": "Photo blog, reporting 🤓 EXIF camera details (aperture, shutter speed, ISO) for each image.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-31T06:33:48Z",
+      "fork_pushed_at": "2026-08-31T06:32:33Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "sambecker/exif-photo-blog",
+      "parent_url": "https://github.com/sambecker/exif-photo-blog",
+      "parent_description": "Photo blog, reporting 🤓 EXIF camera details (aperture, shutter speed, ISO) for each image.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-04T06:36:32Z",
+      "parent_pushed_at": "2026-08-31T00:25:10Z",
+      "parent_stars": 1718,
+      "parent_forks": 386,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/animal-island-ui",
+      "fork_url": "https://github.com/haitai/animal-island-ui",
+      "fork_description": "Animal 风格的 React 组件库",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-30T15:45:30Z",
+      "fork_pushed_at": "2026-08-30T15:44:33Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "guokaigdg/animal-island-ui",
+      "parent_url": "https://github.com/guokaigdg/animal-island-ui",
+      "parent_description": "A Kawaii React UI component library  一个可爱的 React UI 组件库",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T18:21:36Z",
+      "parent_pushed_at": "2026-09-06T16:59:41Z",
+      "parent_stars": 4546,
+      "parent_forks": 375,
+      "behind_by": -1,
+      "ahead_by": -1,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/ternssh",
+      "fork_url": "https://github.com/haitai/ternssh",
+      "fork_description": "A web-based SSH solution that can be deployed on Cloudflare Workers.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-30T04:09:58Z",
+      "fork_pushed_at": "2026-08-29T02:41:46Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "haradakashiwa/ternssh",
+      "parent_url": "https://github.com/haradakashiwa/ternssh",
+      "parent_description": "A web-based SSH solution that can be deployed on Cloudflare Workers.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-05T14:03:40Z",
+      "parent_pushed_at": "2026-08-29T02:41:46Z",
+      "parent_stars": 514,
+      "parent_forks": 133,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/mingyu",
+      "fork_url": "https://github.com/haitai/mingyu",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-30T04:05:31Z",
+      "fork_pushed_at": "2026-08-30T04:05:04Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "Brhiza/mingyu",
+      "parent_url": "https://github.com/Brhiza/mingyu",
+      "parent_description": "八字、紫微、星盘、六爻、梅花、奇门、大六壬、小六壬、塔罗、雷诺曼、灵签、择日一站式玄学算命占卜工具包，输出结构化提示词与数据。提供公开 API、MCP Server 与 skill。",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T10:48:24Z",
+      "parent_pushed_at": "2026-09-06T19:27:34Z",
+      "parent_stars": 392,
+      "parent_forks": 107,
+      "behind_by": 43,
+      "ahead_by": 0,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/bentopdf",
+      "fork_url": "https://github.com/haitai/bentopdf",
+      "fork_description": "The Privacy First PDF Toolkit",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-30T04:05:15Z",
+      "fork_pushed_at": "2026-08-30T04:04:10Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "alam00000/bentopdf",
+      "parent_url": "https://github.com/alam00000/bentopdf",
+      "parent_description": "The Privacy First PDF Toolkit",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T20:03:44Z",
+      "parent_pushed_at": "2026-09-05T07:25:36Z",
+      "parent_stars": 15251,
+      "parent_forks": 1315,
+      "behind_by": 8,
+      "ahead_by": 39,
+      "status": "diverged"
+    },
+    {
+      "fork_repo": "haitai/excalidraw",
+      "fork_url": "https://github.com/haitai/excalidraw",
+      "fork_description": "Virtual whiteboard for sketching hand-drawn like diagrams",
+      "fork_default_branch": "master",
+      "fork_updated_at": "2026-08-27T15:38:45Z",
+      "fork_pushed_at": "2026-08-27T15:14:31Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "excalidraw/excalidraw",
+      "parent_url": "https://github.com/excalidraw/excalidraw",
+      "parent_description": "Virtual whiteboard for sketching hand-drawn like diagrams",
+      "parent_default_branch": "master",
+      "parent_updated_at": "2026-09-06T19:54:37Z",
+      "parent_pushed_at": "2026-09-06T14:31:44Z",
+      "parent_stars": 131264,
+      "parent_forks": 15166,
+      "behind_by": 1,
+      "ahead_by": 0,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/temp-mail",
+      "fork_url": "https://github.com/haitai/temp-mail",
+      "fork_description": "Cloudflare Worker that acts as a temporary email inbox",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-26T06:26:44Z",
+      "fork_pushed_at": "2026-08-26T06:26:38Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "vwh/temp-mail",
+      "parent_url": "https://github.com/vwh/temp-mail",
+      "parent_description": "Cloudflare Worker that acts as a temporary email inbox",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-03T14:31:38Z",
+      "parent_pushed_at": "2026-04-06T04:54:44Z",
+      "parent_stars": 141,
+      "parent_forks": 56,
+      "behind_by": 0,
+      "ahead_by": 26,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/notion_bookmarks",
+      "fork_url": "https://github.com/haitai/notion_bookmarks",
+      "fork_description": "Notion个人导航站",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-21T11:36:13Z",
+      "fork_pushed_at": "2026-08-21T11:36:04Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "moyuguy/notion_bookmarks",
+      "parent_url": "https://github.com/moyuguy/notion_bookmarks",
+      "parent_description": "Notion个人导航站",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-31T05:29:34Z",
+      "parent_pushed_at": "2026-08-21T04:00:56Z",
+      "parent_stars": 89,
+      "parent_forks": 91,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/OuonnkiTV",
+      "fork_url": "https://github.com/haitai/OuonnkiTV",
+      "fork_description": "Ouonnki TV —— 一键搭建个人影视站，支持Vercel自动部署，基于LibreTV修改",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-18T01:23:13Z",
+      "fork_pushed_at": "2026-08-18T01:23:05Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "Ouonnki/OuonnkiTV",
+      "parent_url": "https://github.com/Ouonnki/OuonnkiTV",
+      "parent_description": "Ouonnki TV —— 一键搭建个人影视站，支持Vercel自动部署，基于LibreTV修改",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-04T15:13:43Z",
+      "parent_pushed_at": "2026-08-17T02:55:13Z",
+      "parent_stars": 1263,
+      "parent_forks": 738,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/NextChat",
+      "fork_url": "https://github.com/haitai/NextChat",
+      "fork_description": "✨ Light and Fast AI Assistant. Support: Web | iOS | MacOS | Android |  Linux | Windows",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-13T07:35:18Z",
+      "fork_pushed_at": "2026-08-13T07:34:23Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "ChatGPTNextWeb/NextChat",
+      "parent_url": "https://github.com/ChatGPTNextWeb/NextChat",
+      "parent_description": "✨ Zero-config AI chat assistant. No API key needed — sign up and instantly chat with GPT-5, Claude 4, Gemini 2.5, DeepSeek & 100+ top models. Pay-as-you-go saves you more. Available on Web, iOS, macOS, Android, Linux, Windows.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T16:21:44Z",
+      "parent_pushed_at": "2026-08-11T02:07:25Z",
+      "parent_stars": 88716,
+      "parent_forks": 59132,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/vr",
+      "fork_url": "https://github.com/haitai/vr",
+      "fork_description": "Watch VR like a livestream. A comfortable way to enjoy VR video—no headset required, even if you're prone to motion sickness. ",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-13T07:33:48Z",
+      "fork_pushed_at": "2026-08-13T07:33:13Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "foursmith/vr",
+      "parent_url": "https://github.com/foursmith/vr",
+      "parent_description": "Watch VR like a livestream. A comfortable way to enjoy VR video—no headset required, even if you're prone to motion sickness. ",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-03T22:05:45Z",
+      "parent_pushed_at": "2026-08-12T08:37:30Z",
+      "parent_stars": 116,
+      "parent_forks": 5,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/mhys",
+      "fork_url": "https://github.com/haitai/mhys",
+      "fork_description": "梅花易数",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-11T07:47:48Z",
+      "fork_pushed_at": "2026-08-11T07:47:32Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "link0518/mhys",
+      "parent_url": "https://github.com/link0518/mhys",
+      "parent_description": "梅花易数",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-28T16:23:38Z",
+      "parent_pushed_at": "2026-08-02T21:31:57Z",
+      "parent_stars": 18,
+      "parent_forks": 9,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/mcp-server-trello",
+      "fork_url": "https://github.com/haitai/mcp-server-trello",
+      "fork_description": "A Model Context Protocol (MCP) server that provides tools for interacting with Trello boards.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-11T07:46:51Z",
+      "fork_pushed_at": "2026-08-11T07:46:35Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "delorenj/mcp-server-trello",
+      "parent_url": "https://github.com/delorenj/mcp-server-trello",
+      "parent_description": "A Model Context Protocol (MCP) server that provides tools for interacting with Trello boards.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-03T00:16:17Z",
+      "parent_pushed_at": "2026-08-29T03:57:33Z",
+      "parent_stars": 437,
+      "parent_forks": 144,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/m-nav",
+      "fork_url": "https://github.com/haitai/m-nav",
+      "fork_description": "A simple and convenient navigation website with notion",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-08-11T03:39:38Z",
+      "fork_pushed_at": "2026-08-11T03:39:32Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "busyhe/m-nav",
+      "parent_url": "https://github.com/busyhe/m-nav",
+      "parent_description": "A simple and convenient navigation website with notion",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-04T14:11:18Z",
+      "parent_pushed_at": "2026-04-08T08:07:36Z",
+      "parent_stars": 57,
+      "parent_forks": 14,
+      "behind_by": 0,
+      "ahead_by": 5,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/notion-custom-domain",
+      "fork_url": "https://github.com/haitai/notion-custom-domain",
+      "fork_description": "Custom domains for your Notion pages",
+      "fork_default_branch": "master",
+      "fork_updated_at": "2026-08-02T13:00:06Z",
+      "fork_pushed_at": "2026-08-02T12:59:41Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "hosso/notion-custom-domain",
+      "parent_url": "https://github.com/hosso/notion-custom-domain",
+      "parent_description": "Custom domains for your Notion pages",
+      "parent_default_branch": "master",
+      "parent_updated_at": "2026-06-24T21:28:54Z",
+      "parent_pushed_at": "2026-03-21T17:29:14Z",
+      "parent_stars": 98,
+      "parent_forks": 57,
+      "behind_by": 0,
+      "ahead_by": 11,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/Serv00_CT8_Auto_Login",
+      "fork_url": "https://github.com/haitai/Serv00_CT8_Auto_Login",
+      "fork_description": "serv00与ct8自动化批量登录保号，每个月自动登录一次面板，并且发送消息到Telegram",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-26T06:23:18Z",
+      "fork_pushed_at": "2026-07-26T06:23:05Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "18686187636/Serv00_CT8_Auto_Login",
+      "parent_url": "https://github.com/18686187636/Serv00_CT8_Auto_Login",
+      "parent_description": "serv00与ct8自动化批量登录保号，每个月自动登录一次面板，并且发送消息到Telegram",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-07-08T20:08:28Z",
+      "parent_pushed_at": "2026-07-08T20:07:43Z",
+      "parent_stars": 8,
+      "parent_forks": 13,
+      "behind_by": 0,
+      "ahead_by": 1,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/moments",
+      "fork_url": "https://github.com/haitai/moments",
+      "fork_description": "瞬刻，更简洁、更现代化的内容发布平台",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-25T07:38:54Z",
+      "fork_pushed_at": "2026-07-25T07:38:47Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "reaishijie/moments",
+      "parent_url": "https://github.com/reaishijie/moments",
+      "parent_description": "瞬刻，更简洁、更现代化的内容发布平台",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-27T08:53:26Z",
+      "parent_pushed_at": "2026-08-30T11:21:25Z",
+      "parent_stars": 144,
+      "parent_forks": 20,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/wxchat",
+      "fork_url": "https://github.com/haitai/wxchat",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-23T02:45:53Z",
+      "fork_pushed_at": "2026-07-23T02:45:50Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "xiyewuqiu/wxchat",
+      "parent_url": "https://github.com/xiyewuqiu/wxchat",
+      "parent_description": "",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-14T16:05:46Z",
+      "parent_pushed_at": "2026-07-22T15:26:07Z",
+      "parent_stars": 115,
+      "parent_forks": 41,
+      "behind_by": 0,
+      "ahead_by": 3,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/91",
+      "fork_url": "https://github.com/haitai/91",
+      "fork_description": "nine one",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-22T02:39:20Z",
+      "fork_pushed_at": "2026-07-22T02:39:13Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "nianzhibai/91",
+      "parent_url": "https://github.com/nianzhibai/91",
+      "parent_description": "nine one",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T14:56:28Z",
+      "parent_pushed_at": "2026-09-06T14:56:03Z",
+      "parent_stars": 1425,
+      "parent_forks": 369,
+      "behind_by": 185,
+      "ahead_by": 0,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/cut-it-out",
+      "fork_url": "https://github.com/haitai/cut-it-out",
+      "fork_description": "A browser based background removal tool for images.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-20T09:47:08Z",
+      "fork_pushed_at": "2025-12-13T14:38:10Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "Suvink/cut-it-out",
+      "parent_url": "https://github.com/Suvink/cut-it-out",
+      "parent_description": "A browser based background removal tool for images.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-05T13:09:01Z",
+      "parent_pushed_at": "2025-12-13T14:38:10Z",
+      "parent_stars": 468,
+      "parent_forks": 63,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/BroadcastChannel",
+      "fork_url": "https://github.com/haitai/BroadcastChannel",
+      "fork_description": "Turn your Telegram Channel into a MicroBlog.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-20T03:25:52Z",
+      "fork_pushed_at": "2026-07-20T03:27:02Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "miantiao-me/BroadcastChannel",
+      "parent_url": "https://github.com/miantiao-me/BroadcastChannel",
+      "parent_description": "Turn your Telegram Channel into a MicroBlog.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-03T16:13:56Z",
+      "parent_pushed_at": "2026-07-19T06:20:43Z",
+      "parent_stars": 2095,
+      "parent_forks": 1040,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/Sink",
+      "fork_url": "https://github.com/haitai/Sink",
+      "fork_description": "⚡ A Simple / Speedy / Secure Link Shortener with Analytics, 100% run on Cloudflare.",
+      "fork_default_branch": "master",
+      "fork_updated_at": "2026-07-19T06:12:28Z",
+      "fork_pushed_at": "2026-07-19T06:12:15Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "miantiao-me/Sink",
+      "parent_url": "https://github.com/miantiao-me/Sink",
+      "parent_description": "⚡ A Simple / Speedy / Secure Link Shortener with Analytics, 100% run on Cloudflare.",
+      "parent_default_branch": "master",
+      "parent_updated_at": "2026-09-06T14:29:39Z",
+      "parent_pushed_at": "2026-08-20T11:45:00Z",
+      "parent_stars": 7093,
+      "parent_forks": 5178,
+      "behind_by": 2,
+      "ahead_by": 0,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/moodist",
+      "fork_url": "https://github.com/haitai/moodist",
+      "fork_description": "🌲 Ambient sounds for focus and calm.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-18T01:31:18Z",
+      "fork_pushed_at": "2026-07-18T01:31:13Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "remvze/moodist",
+      "parent_url": "https://github.com/remvze/moodist",
+      "parent_description": "Ambient sounds for focus and calm.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T19:35:35Z",
+      "parent_pushed_at": "2026-09-06T16:10:34Z",
+      "parent_stars": 3754,
+      "parent_forks": 323,
+      "behind_by": 2,
+      "ahead_by": 6,
+      "status": "diverged"
+    },
+    {
+      "fork_repo": "haitai/sub-store-cloudflare",
+      "fork_url": "https://github.com/haitai/sub-store-cloudflare",
+      "fork_description": "一个部署在 Cloudflare Workers 上的订阅聚合与规则配置工具。它把订阅源、节点处理、组合订阅和分流规则模板放在云端，客户端只需要订阅最终生成的链接。",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-07-11T14:30:43Z",
+      "fork_pushed_at": "2026-07-11T14:30:37Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "realchendahuang/sub-store-cloudflare",
+      "parent_url": "https://github.com/realchendahuang/sub-store-cloudflare",
+      "parent_description": "一个部署在 Cloudflare Workers 上的订阅聚合与规则配置工具。它把订阅源、节点处理、组合订阅和分流规则模板放在云端，客户端只需要订阅最终生成的链接。",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-05T12:23:19Z",
+      "parent_pushed_at": "2026-07-11T12:38:02Z",
+      "parent_stars": 279,
+      "parent_forks": 59,
+      "behind_by": 0,
+      "ahead_by": 2,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/cloudflare-ai-web",
+      "fork_url": "https://github.com/haitai/cloudflare-ai-web",
+      "fork_description": "Cloudflare AI Platform with one-click deployment. 可一键部署的Cloudflare AI平台",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-06-18T01:48:59Z",
+      "fork_pushed_at": "2026-06-18T01:48:54Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "Jazee6/cloudflare-ai-web",
+      "parent_url": "https://github.com/Jazee6/cloudflare-ai-web",
+      "parent_description": "Cloudflare AI Platform with one-click deployment",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T14:12:47Z",
+      "parent_pushed_at": "2026-09-06T13:36:06Z",
+      "parent_stars": 2179,
+      "parent_forks": 575,
+      "behind_by": 19,
+      "ahead_by": 0,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/qiaomu-blog-opensource",
+      "fork_url": "https://github.com/haitai/qiaomu-blog-opensource",
+      "fork_description": "Open-source Cloudflare blog template based on OpenNext, Next.js 16, D1, and R2",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-04-29T06:15:26Z",
+      "fork_pushed_at": "2026-04-29T06:15:21Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "joeseesun/qiaomu-blog-opensource",
+      "parent_url": "https://github.com/joeseesun/qiaomu-blog-opensource",
+      "parent_description": "Open-source Cloudflare blog template based on OpenNext, Next.js 16, D1, and R2",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T14:29:44Z",
+      "parent_pushed_at": "2026-04-28T04:47:39Z",
+      "parent_stars": 298,
+      "parent_forks": 114,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/workerchat-with-E2EE",
+      "fork_url": "https://github.com/haitai/workerchat-with-E2EE",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-04-21T11:50:02Z",
+      "fork_pushed_at": "2026-04-21T11:49:57Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "gxxk-dev/workerchat-with-E2EE",
+      "parent_url": "https://github.com/gxxk-dev/workerchat-with-E2EE",
+      "parent_description": "基于Cloudflare Worker的极简端到端非对称加密聊天室.",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-02T08:30:52Z",
+      "parent_pushed_at": "2026-04-19T10:24:38Z",
+      "parent_stars": 29,
+      "parent_forks": 28,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/OSSshelf",
+      "fork_url": "https://github.com/haitai/OSSshelf",
+      "fork_description": "基于 Cloudflare 部署的多厂商 OSS 文件管理系统 统一管理主流对象存储 · 支持 WebDAV 协议 · 预签名直传 · 安全分享",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-03-27T07:04:08Z",
+      "fork_pushed_at": "2026-03-27T06:46:23Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "cuivic/OSSshelf",
+      "parent_url": "https://github.com/cuivic/OSSshelf",
+      "parent_description": "基于 Cloudflare 部署的多厂商 OSS 文件管理系统 统一管理主流对象存储 · 支持 WebDAV 协议 · 预签名直传 · 安全分享",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-02T07:19:11Z",
+      "parent_pushed_at": "2026-03-17T09:21:53Z",
+      "parent_stars": 1,
+      "parent_forks": 14,
+      "behind_by": 0,
+      "ahead_by": 152,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/web-realesrgan",
+      "fork_url": "https://github.com/haitai/web-realesrgan",
+      "fork_description": "Run Real-ESRGAN/Real-CUGAN in Your Local Browser on Any Device. Powered by TensorFlow.js. Support computing with WebGL and WebGPU.",
+      "fork_default_branch": "master",
+      "fork_updated_at": "2026-03-15T11:19:56Z",
+      "fork_pushed_at": "2026-03-15T11:19:50Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "xororz/web-realesrgan",
+      "parent_url": "https://github.com/xororz/web-realesrgan",
+      "parent_description": "Run Real-ESRGAN/Real-CUGAN in Your Local Browser on Any Device. Powered by TensorFlow.js. Support computing with WebGL and WebGPU.",
+      "parent_default_branch": "master",
+      "parent_updated_at": "2026-09-04T16:15:43Z",
+      "parent_pushed_at": "2025-12-12T08:46:11Z",
+      "parent_stars": 432,
+      "parent_forks": 59,
+      "behind_by": 0,
+      "ahead_by": 5,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/CloudPaste",
+      "fork_url": "https://github.com/haitai/CloudPaste",
+      "fork_description": "A Cloudflare-based online text/large file sharing platform that supports multiple syntax Markdown rendering, self-destructing messages, S3 aggregated storage, password protection, and more. It can be mounted as WebDAV and supports Docker deployment.",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-03-15T11:16:29Z",
+      "fork_pushed_at": "2026-03-15T11:16:21Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "ling-drag0n/CloudPaste",
+      "parent_url": "https://github.com/ling-drag0n/CloudPaste",
+      "parent_description": "🌩️ Serverless 自托管的文件管理与文本分享工具/网盘，支持多存储聚合管理和WebDAV 服务挂载。兼容 S3、WebDAV、OneDrive、Google Drive、Telegram、HF、GitHub 等。内置   Markdown 编辑器、30+文件格式预览。支持 Cloudflare Workers 或 Docker 部署。",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T00:39:08Z",
+      "parent_pushed_at": "2026-01-23T08:12:18Z",
+      "parent_stars": 2639,
+      "parent_forks": 1755,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/priospace",
+      "fork_url": "https://github.com/haitai/priospace",
+      "fork_description": "All-in-one Productivity App",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-03-15T11:14:41Z",
+      "fork_pushed_at": "2026-03-15T11:14:38Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "AnoyRC/priospace",
+      "parent_url": "https://github.com/AnoyRC/priospace",
+      "parent_description": "All-in-one Productivity App",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T18:36:24Z",
+      "parent_pushed_at": "2026-01-19T14:36:31Z",
+      "parent_stars": 570,
+      "parent_forks": 52,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/english-dictionary-web",
+      "fork_url": "https://github.com/haitai/english-dictionary-web",
+      "fork_description": "基于开源英汉词典数据的智能学习平台",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2026-01-07T07:30:07Z",
+      "fork_pushed_at": "2026-01-07T07:30:02Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "TICKurt/english-dictionary-web",
+      "parent_url": "https://github.com/TICKurt/english-dictionary-web",
+      "parent_description": "科学英语学习平台-基于LLM释义的英汉词典数据",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-04T17:50:17Z",
+      "parent_pushed_at": "2025-12-25T02:21:20Z",
+      "parent_stars": 230,
+      "parent_forks": 48,
+      "behind_by": 0,
+      "ahead_by": 6,
+      "status": "ahead"
+    },
+    {
+      "fork_repo": "haitai/clash",
+      "fork_url": "https://github.com/haitai/clash",
+      "fork_description": "",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2025-09-07T10:31:02Z",
+      "fork_pushed_at": "2025-09-07T10:30:59Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "colin1114/clash",
+      "parent_url": "https://github.com/colin1114/clash",
+      "parent_description": "",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-04T18:19:55Z",
+      "parent_pushed_at": "2025-09-06T07:14:04Z",
+      "parent_stars": 168,
+      "parent_forks": 62,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/drawstamputils",
+      "fork_url": "https://github.com/haitai/drawstamputils",
+      "fork_description": "Draw Stamp Utils with Javascript",
+      "fork_default_branch": "master",
+      "fork_updated_at": "2025-08-13T15:26:21Z",
+      "fork_pushed_at": "2025-08-13T15:26:17Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "xxss0903/drawstamputils",
+      "parent_url": "https://github.com/xxss0903/drawstamputils",
+      "parent_description": "Draw Stamp Utils with Javascript",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-06T10:40:00Z",
+      "parent_pushed_at": "2026-06-26T10:39:14Z",
+      "parent_stars": 1616,
+      "parent_forks": 678,
+      "behind_by": -1,
+      "ahead_by": -1,
+      "status": "behind"
+    },
+    {
+      "fork_repo": "haitai/recorder",
+      "fork_url": "https://github.com/haitai/recorder",
+      "fork_description": "📹 Record is an open-source web app to record screen and camera directly in your browser | No installation required | No tracking | Fully local",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2025-05-08T13:50:03Z",
+      "fork_pushed_at": "2025-02-20T17:12:57Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "addyosmani/recorder",
+      "parent_url": "https://github.com/addyosmani/recorder",
+      "parent_description": "📹 Record is an open-source web app to record screen and camera directly in your browser | No installation required | No tracking | Fully local",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-02T21:06:57Z",
+      "parent_pushed_at": "2025-02-20T17:12:57Z",
+      "parent_stars": 526,
+      "parent_forks": 57,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/filter",
+      "fork_url": "https://github.com/haitai/filter",
+      "fork_description": "Filter - Web Image Editor",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2025-05-08T13:19:57Z",
+      "fork_pushed_at": "2025-01-06T09:22:23Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "addyosmani/filter",
+      "parent_url": "https://github.com/addyosmani/filter",
+      "parent_description": "Filter - Web Image Editor",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-08-27T16:33:59Z",
+      "parent_pushed_at": "2025-01-06T09:22:23Z",
+      "parent_stars": 207,
+      "parent_forks": 9,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/squish",
+      "fork_url": "https://github.com/haitai/squish",
+      "fork_description": "Squish - Batch Browser-based Image Compression",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2025-05-01T12:35:05Z",
+      "fork_pushed_at": "2025-01-16T02:56:23Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "addyosmani/squish",
+      "parent_url": "https://github.com/addyosmani/squish",
+      "parent_description": "Squish - Batch Browser-based Image Compression",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-05T08:35:10Z",
+      "parent_pushed_at": "2025-01-16T02:56:23Z",
+      "parent_stars": 1048,
+      "parent_forks": 111,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    },
+    {
+      "fork_repo": "haitai/bg-remove",
+      "fork_url": "https://github.com/haitai/bg-remove",
+      "fork_description": "Free image background removal - private, client-side and powered by Transformers.js",
+      "fork_default_branch": "main",
+      "fork_updated_at": "2025-05-01T12:07:32Z",
+      "fork_pushed_at": "2025-01-05T21:42:46Z",
+      "fork_stars": 0,
+      "fork_forks": 0,
+      "parent_repo": "addyosmani/bg-remove",
+      "parent_url": "https://github.com/addyosmani/bg-remove",
+      "parent_description": "Free image background removal - private, client-side and powered by Transformers.js",
+      "parent_default_branch": "main",
+      "parent_updated_at": "2026-09-04T10:41:14Z",
+      "parent_pushed_at": "2025-01-05T21:42:46Z",
+      "parent_stars": 1015,
+      "parent_forks": 117,
+      "behind_by": 0,
+      "ahead_by": 0,
+      "status": "up_to_date"
+    }
+  ]
+};
+
+const STATUS_ICONS = {
+  up_to_date: "check-circle-2",
+  behind: "arrow-down-circle",
+  ahead: "arrow-up-circle",
+  diverged: "git-compare-arrows",
+  unknown: "help-circle"
+};
+
+const STATUS_LABELS = {
+  up_to_date: "Up to date",
+  behind: "Behind",
+  ahead: "Ahead",
+  diverged: "Diverged",
+  unknown: "Unknown"
+};
+
+const STATUS_ORDER = { behind: 0, diverged: 1, unknown: 2, ahead: 3, up_to_date: 4 };
+
+let currentFilter = "all";
+
+function icon(name) {
+  return '<i data-lucide="' + name + '"></i>';
+}
+
+function refreshIcons() {
+  if (window.lucide) lucide.createIcons();
+}
+
+function init() {
+  const d = DATA;
+  document.getElementById("subtitle").textContent =
+    "Monitoring " + d.username + "'s forked repositories — " + d.total_forks + " repos tracked";
+
+  // Stats
+  const statsEl = document.getElementById("stats");
+  const stats = [
+    { key: "total", label: "Total", val: d.total_forks, icon: "git-fork" },
+    { key: "behind", label: "Behind", val: d.status_counts.behind || 0, icon: "arrow-down" },
+    { key: "diverged", label: "Diverged", val: d.status_counts.diverged || 0, icon: "git-compare-arrows" },
+    { key: "up-to-date", label: "Up to date", val: d.status_counts.up_to_date || 0, icon: "check" },
+    { key: "ahead", label: "Ahead", val: d.status_counts.ahead || 0, icon: "arrow-up" },
+  ];
+  statsEl.innerHTML = stats.map(function(s) {
+    return '<div class="stat-card ' + s.key + '">' +
+      '<div class="num">' + s.val + '</div>' +
+      '<div class="label">' + icon(s.icon) + ' ' + s.label + '</div>' +
+      '</div>';
+  }).join("");
+
+  // Filters
+  const filtersEl = document.getElementById("filters");
+  const filterOptions = [
+    { key: "all", label: "All", icon: "list" },
+    { key: "behind", label: "Behind", icon: "arrow-down" },
+    { key: "diverged", label: "Diverged", icon: "git-compare-arrows" },
+    { key: "up_to_date", label: "Up to date", icon: "check" },
+    { key: "ahead", label: "Ahead", icon: "arrow-up" },
+  ];
+  filtersEl.innerHTML = filterOptions.map(function(f) {
+    return '<button class="filter-btn' + (f.key === "all" ? " active" : "") + '" data-filter="' + f.key + '">' +
+      icon(f.icon) + ' ' + f.label + '</button>';
+  }).join("");
+  filtersEl.addEventListener("click", function(e) {
+    if (!e.target.classList.contains("filter-btn")) return;
+    filtersEl.querySelectorAll(".filter-btn").forEach(function(b) { b.classList.remove("active"); });
+    e.target.classList.add("active");
+    currentFilter = e.target.dataset.filter;
+    renderRepos();
+  });
+
+  // Search
+  const searchInput = document.getElementById("search");
+  const searchWrap = document.getElementById("searchWrap");
+  const clearBtn = document.getElementById("clearSearch");
+  searchInput.addEventListener("input", function() {
+    searchWrap.classList.toggle("has-text", searchInput.value.length > 0);
+    renderRepos();
+  });
+  clearBtn.addEventListener("click", function() {
+    searchInput.value = "";
+    searchWrap.classList.remove("has-text");
+    searchInput.focus();
+    renderRepos();
+  });
+
+  // Time
+  const genTime = new Date(d.generated_at);
+  document.getElementById("gen-time").textContent =
+    "Last updated: " + genTime.toLocaleString() + " (UTC)";
+
+  renderRepos();
+}
+
+function renderRepos() {
+  const query = document.getElementById("search").value.toLowerCase();
+  let repos = DATA.repos.slice();
+
+  if (currentFilter !== "all") {
+    repos = repos.filter(function(r) { return r.status === currentFilter; });
+  }
+
+  if (query) {
+    repos = repos.filter(function(r) {
+      return r.fork_repo.toLowerCase().includes(query) ||
+        r.parent_repo.toLowerCase().includes(query) ||
+        (r.fork_description || "").toLowerCase().includes(query);
+    });
+  }
+
+  repos.sort(function(a, b) {
+    return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+  });
+
+  const container = document.getElementById("repos");
+  if (repos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No repositories match the current filter.</div>';
+    refreshIcons();
+    return;
+  }
+
+  container.innerHTML = repos.map(function(r) {
+    const shortFork = r.fork_repo.split("/")[1];
+    const shortParent = r.parent_repo.split("/")[1];
+    const desc = r.fork_description || r.parent_description || "";
+    const syncUrl = "https://github.com/" + r.fork_repo;
+    const forkUpdated = r.fork_pushed_at ? formatDate(r.fork_pushed_at) : "N/A";
+    const parentUpdated = r.parent_pushed_at ? formatDate(r.parent_pushed_at) : "N/A";
+
+    let commitsHtml = "";
+    if (r.behind_by > 0 || r.ahead_by > 0) {
+      commitsHtml = '<div class="commits-info">';
+      if (r.behind_by > 0) commitsHtml += '<span class="behind-count">' + r.behind_by + '</span> commit(s) behind upstream';
+      if (r.behind_by > 0 && r.ahead_by > 0) commitsHtml += " · ";
+      if (r.ahead_by > 0) commitsHtml += '<span class="ahead-count">' + r.ahead_by + '</span> commit(s) ahead';
+      commitsHtml += '</div>';
+    }
+
+    let syncBtn = "";
+    if (r.status === "behind" || r.status === "diverged") {
+      syncBtn = '<a class="sync-btn" href="' + syncUrl + '" target="_blank" rel="noopener">' +
+        icon("refresh-cw") + ' Sync fork</a>';
+    }
+
+    const statusIconName = STATUS_ICONS[r.status] || "help-circle";
+    const statusLabel = STATUS_LABELS[r.status] || r.status;
+
+    return '<div class="repo-card status-' + r.status + '">' +
+      '<div class="repo-header">' +
+        '<div class="repo-name">' +
+          '<a href="' + r.fork_url + '" target="_blank" rel="noopener">' + shortFork + '</a>' +
+          '<span class="arrow-icon">' + icon("arrow-left") + '</span>' +
+          '<a href="' + r.parent_url + '" target="_blank" rel="noopener" style="color:var(--text-secondary)">' + shortParent + '</a>' +
+        '</div>' +
+        '<span class="status-badge ' + r.status + '">' + icon(statusIconName) + ' ' + statusLabel + '</span>' +
+      '</div>' +
+      (desc ? '<div class="repo-desc">' + escHtml(desc) + '</div>' : '') +
+      '<div class="repo-meta">' +
+        '<span>' + icon("git-fork") + ' Fork: ' + forkUpdated + '</span>' +
+        '<span>' + icon("home") + ' Upstream: ' + parentUpdated + '</span>' +
+        (r.parent_stars ? '<span>' + icon("star") + ' ' + r.parent_stars + '</span>' : '') +
+      '</div>' +
+      commitsHtml +
+      syncBtn +
+    '</div>';
+  }).join("");
+
+  refreshIcons();
+}
+
+function formatDate(isoStr) {
+  try {
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffDays === 0) return "today";
+    if (diffDays === 1) return "yesterday";
+    if (diffDays < 30) return diffDays + "d ago";
+    if (diffDays < 365) return Math.floor(diffDays / 30) + "mo ago";
+    return Math.floor(diffDays / 365) + "y ago";
+  } catch {
+    return isoStr;
+  }
+}
+
+function escHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+// Back to top
+(function() {
+  const btn = document.getElementById("backToTop");
+  window.addEventListener("scroll", function() {
+    btn.classList.toggle("visible", window.scrollY > 400);
+  });
+  btn.addEventListener("click", function() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+})();
+
+init();
+refreshIcons();
+</script>
+</body>
+</html>
