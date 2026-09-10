@@ -316,11 +316,14 @@ def main():
 
     results = []
     for i, repo in enumerate(repos, 1):
+        if not repo.get("full_name"):
+            print(f"  [{i}/{len(repos)}] skipped — missing repo info (may be DMCA-takedown)")
+            continue
         parent = repo.get("parent")
         if not parent:
             print(f"  [{i}/{len(repos)}] {repo['full_name']} — skipped (no parent)")
             continue
-        print(f"  [{i}/{len(repos)}] {repo['full_name']} ← {parent['full_name']}")
+        print(f"  [{i}/{len(repos)}] {repo['full_name']} <- {parent['full_name']}")
         result = compare_fork_with_parent(repo)
         if result:
             print(f"    → {result['status']} (behind: {result['behind_by']}, ahead: {result['ahead_by']})")
