@@ -1,0 +1,5 @@
+{
+  "exclude": [],
+  "include_only": null,
+  "notes": "exclude: 不监控的仓库列表 (格式: owner/repo)。include_only: 只监控这些仓库 (null=全部监控)"
+}
